@@ -2148,7 +2148,7 @@ class App {
     }
 
     getActiveEdges() {
-        const shape = this.shape;
+        const shape = this.currentShape;
         if (!shape) return [];
         const edges = [];
         if (shape.edges) {
@@ -2400,10 +2400,10 @@ class App {
         
         // Draw highlighted edges
         for (const edgeIdx of this.highlightedEdges) {
-            if (this.shape && this.shape.edges && this.shape.edges[edgeIdx]) {
-                const edge = this.shape.edges[edgeIdx];
-                const v1 = this.shape.vertices[edge[0]].rotate(this.rotX, this.rotY).project(w, h, this.cameraDistance, this.zoom);
-                const v2 = this.shape.vertices[edge[1]].rotate(this.rotX, this.rotY).project(w, h, this.cameraDistance, this.zoom);
+            if (this.currentShape && this.currentShape.edges && this.currentShape.edges[edgeIdx]) {
+                const edge = this.currentShape.edges[edgeIdx];
+                const v1 = this.currentShape.vertices[edge[0]].rotate(this.rotX, this.rotY).project(w, h, this.cameraDistance, this.zoom);
+                const v2 = this.currentShape.vertices[edge[1]].rotate(this.rotX, this.rotY).project(w, h, this.cameraDistance, this.zoom);
                 
                 this.ctx.beginPath();
                 this.ctx.moveTo(v1.x, v1.y);
