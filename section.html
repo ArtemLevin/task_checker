@@ -418,6 +418,10 @@
                 <button class="tool-btn" id="toggleConstructionStepsBtn">👣 Пошаговое построение</button>
                 <button class="tool-btn" id="toggleTraceMethodBtn">🧭 Метод следов</button>
                 <button class="tool-btn" id="toggleAuxiliaryPlaneBtn">🪟 Вспомогательная плоскость</button>
+                <button class="tool-btn" id="toggleParallelSectionsBtn">📐 Метод параллельных сечений</button>
+                <button class="tool-btn" id="toggleTwoPointsDirectionBtn">🎯 2 точки + направление</button>
+                <button class="tool-btn" id="toggleSelectedFacesBtn">🔲 Выбор граней</button>
+                <button class="tool-btn" id="toggleManualModeBtn">✏️ Ручной режим</button>
             </div>
 
             <div style="background: var(--bg-card); padding: 1rem; border-radius: 12px; margin-top: 1rem; border: 1px solid var(--border);">
@@ -1056,6 +1060,24 @@ class App {
         this.auxStepElapsed = 0;
         this.auxStepDuration = 1200;
 
+        // Новые режимы построения
+        this.showParallelSectionsMethod = false;
+        this.parallelStepIndex = 0;
+        this.parallelStepElapsed = 0;
+        this.parallelStepDuration = 1000;
+
+        this.showTwoPointsDirectionMode = false;
+        this.twoPointsDirectionData = { point1: null, point2: null, direction: null };
+
+        this.showSelectedFacesMode = false;
+        this.selectedFaceIndices = [];
+
+        this.showManualMode = false;
+        this.manualSteps = [];
+        this.manualStepIndex = 0;
+        this.manualStepElapsed = 0;
+        this.manualStepDuration = 900;
+
         this.lastFrameTime = performance.now();
 
         this.sections = [];
@@ -1266,11 +1288,104 @@ class App {
             if (this.showAuxiliaryPlaneMethod) {
                 this.showConstructionSteps = false;
                 this.showTraceMethod = false;
+                this.showParallelSectionsMethod = false;
+                this.showTwoPointsDirectionMode = false;
+                this.showSelectedFacesMode = false;
+                this.showManualMode = false;
                 document.getElementById('toggleConstructionStepsBtn').classList.remove('active');
                 document.getElementById('toggleTraceMethodBtn').classList.remove('active');
+                document.getElementById('toggleParallelSectionsBtn').classList.remove('active');
+                document.getElementById('toggleTwoPointsDirectionBtn').classList.remove('active');
+                document.getElementById('toggleSelectedFacesBtn').classList.remove('active');
+                document.getElementById('toggleManualModeBtn').classList.remove('active');
             }
             document.getElementById('toggleAuxiliaryPlaneBtn').classList.toggle('active', this.showAuxiliaryPlaneMethod);
             this.restartAuxiliaryPlaneMethod();
+        };
+
+        // Метод параллельных сечений
+        document.getElementById('toggleParallelSectionsBtn').onclick = () => {
+            this.showParallelSectionsMethod = !this.showParallelSectionsMethod;
+            if (this.showParallelSectionsMethod) {
+                this.showConstructionSteps = false;
+                this.showTraceMethod = false;
+                this.showAuxiliaryPlaneMethod = false;
+                this.showTwoPointsDirectionMode = false;
+                this.showSelectedFacesMode = false;
+                this.showManualMode = false;
+                document.getElementById('toggleConstructionStepsBtn').classList.remove('active');
+                document.getElementById('toggleTraceMethodBtn').classList.remove('active');
+                document.getElementById('toggleAuxiliaryPlaneBtn').classList.remove('active');
+                document.getElementById('toggleTwoPointsDirectionBtn').classList.remove('active');
+                document.getElementById('toggleSelectedFacesBtn').classList.remove('active');
+                document.getElementById('toggleManualModeBtn').classList.remove('active');
+            }
+            document.getElementById('toggleParallelSectionsBtn').classList.toggle('active', this.showParallelSectionsMethod);
+            this.restartParallelSectionsMethod();
+        };
+
+        // Построение по двум точкам и направлению
+        document.getElementById('toggleTwoPointsDirectionBtn').onclick = () => {
+            this.showTwoPointsDirectionMode = !this.showTwoPointsDirectionMode;
+            if (this.showTwoPointsDirectionMode) {
+                this.showConstructionSteps = false;
+                this.showTraceMethod = false;
+                this.showAuxiliaryPlaneMethod = false;
+                this.showParallelSectionsMethod = false;
+                this.showSelectedFacesMode = false;
+                this.showManualMode = false;
+                this.twoPointsDirectionData = { point1: null, point2: null, direction: null };
+                document.getElementById('toggleConstructionStepsBtn').classList.remove('active');
+                document.getElementById('toggleTraceMethodBtn').classList.remove('active');
+                document.getElementById('toggleAuxiliaryPlaneBtn').classList.remove('active');
+                document.getElementById('toggleParallelSectionsBtn').classList.remove('active');
+                document.getElementById('toggleSelectedFacesBtn').classList.remove('active');
+                document.getElementById('toggleManualModeBtn').classList.remove('active');
+            }
+            document.getElementById('toggleTwoPointsDirectionBtn').classList.toggle('active', this.showTwoPointsDirectionMode);
+        };
+
+        // Построение через выбранные грани
+        document.getElementById('toggleSelectedFacesBtn').onclick = () => {
+            this.showSelectedFacesMode = !this.showSelectedFacesMode;
+            if (this.showSelectedFacesMode) {
+                this.showConstructionSteps = false;
+                this.showTraceMethod = false;
+                this.showAuxiliaryPlaneMethod = false;
+                this.showParallelSectionsMethod = false;
+                this.showTwoPointsDirectionMode = false;
+                this.showManualMode = false;
+                this.selectedFaceIndices = [];
+                document.getElementById('toggleConstructionStepsBtn').classList.remove('active');
+                document.getElementById('toggleTraceMethodBtn').classList.remove('active');
+                document.getElementById('toggleAuxiliaryPlaneBtn').classList.remove('active');
+                document.getElementById('toggleParallelSectionsBtn').classList.remove('active');
+                document.getElementById('toggleTwoPointsDirectionBtn').classList.remove('active');
+                document.getElementById('toggleManualModeBtn').classList.remove('active');
+            }
+            document.getElementById('toggleSelectedFacesBtn').classList.toggle('active', this.showSelectedFacesMode);
+        };
+
+        // Ручной режим пошагового построения
+        document.getElementById('toggleManualModeBtn').onclick = () => {
+            this.showManualMode = !this.showManualMode;
+            if (this.showManualMode) {
+                this.showConstructionSteps = false;
+                this.showTraceMethod = false;
+                this.showAuxiliaryPlaneMethod = false;
+                this.showParallelSectionsMethod = false;
+                this.showTwoPointsDirectionMode = false;
+                this.showSelectedFacesMode = false;
+                this.manualSteps = [];
+                this.manualStepIndex = 0;
+                document.getElementById('toggleConstructionStepsBtn').classList.remove('active');
+                document.getElementById('toggleTraceMethodBtn').classList.remove('active');
+                document.getElementById('toggleAuxiliaryPlaneBtn').classList.remove('active');
+                document.getElementById('toggleParallelSectionsBtn').classList.remove('active');
+                document.getElementById('toggleTwoPointsDirectionBtn').classList.remove('active');
+                document.getElementById('toggleSelectedFacesBtn').classList.remove('active');
+            }
+            document.getElementById('toggleManualModeBtn').classList.toggle('active', this.showManualMode);
         };
     }
 
@@ -1278,6 +1393,12 @@ class App {
         this.restartConstructionSteps();
         this.restartTraceMethod();
         this.restartAuxiliaryPlaneMethod();
+        this.restartParallelSectionsMethod();
+    }
+
+    restartParallelSectionsMethod() {
+        this.parallelStepIndex = 0;
+        this.parallelStepElapsed = 0;
     }
 
     syncSectionControls() {
@@ -2618,6 +2739,7 @@ ${p.hostType === 'edge'
         this.advanceConstructionSteps(dt);
         this.advanceTraceMethod(dt);
         this.advanceAuxiliaryPlaneMethod(dt);
+        this.advanceParallelSectionsMethod(dt);
         this.render();
 
         requestAnimationFrame((ts) => this.loop(ts));
