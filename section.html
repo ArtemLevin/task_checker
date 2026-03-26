@@ -427,6 +427,8 @@
                 <button class="tool-btn" id="toggleTwoPointsDirectionBtn">🎯 2 точки + направление</button>
                 <button class="tool-btn" id="toggleSelectedFacesBtn">🔲 Выбор граней</button>
                 <button class="tool-btn" id="toggleManualModeBtn">✏️ Ручной режим</button>
+                <button class="tool-btn" id="toggleXRayBtn">💡 Рентген</button>
+                <button class="tool-btn" id="generateTaskBtn">📚 Генератор задач</button>
             </div>
 
             <!-- Step-by-step control panel -->
@@ -457,6 +459,20 @@
                 <h3 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; color: var(--accent);">💡 Пояснение</h3>
                 <p id="explanationText" style="margin: 0; font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">Выберите метод построения или включите пошаговый режим для детального объяснения каждого шага.</p>
             </div>
+            
+            <!-- Task Panel (hidden by default) -->
+            <div id="taskPanel" style="background: var(--bg-card); padding: 1rem; border-radius: 12px; margin-top: 1rem; border: 1px solid var(--border); display: none;">
+                <h3 style="margin: 0 0 0.75rem 0; font-size: 0.95rem; color: var(--accent);">📚 Задача</h3>
+                <div id="taskDescription" style="font-size: 0.9rem; color: var(--text-primary); margin-bottom: 1rem; line-height: 1.5;"></div>
+                <div class="toolbar" style="margin-bottom: 0.75rem;">
+                    <button class="tool-btn" id="newTaskBtn">🔄 Новая задача</button>
+                    <button class="tool-btn" id="checkTaskBtn">✅ Проверить</button>
+                    <button class="tool-btn" id="showHintBtn">💡 Подсказка</button>
+                </div>
+                <div id="taskFeedback" style="font-size: 0.85rem; padding: 0.5rem; border-radius: 6px; display: none;"></div>
+                <div id="taskHint" style="font-size: 0.85rem; color: var(--warning); margin-top: 0.5rem; display: none;"></div>
+            </div>
+            
             <div style="background: var(--bg-card); padding: 1rem; border-radius: 12px; margin-top: 1rem; border: 1px solid var(--border);">
                 <div class="control-group" style="margin-bottom:0;">
                     <label>Скорость вращения: <span id="autoRotateSpeedValue">0.6</span></label>
@@ -1268,6 +1284,13 @@ class App {
         this.manualStepElapsed = 0;
         this.manualStepDuration = 900;
 
+        // Educational features
+        this.showXRay = false;
+        this.xRayPhase = 0;
+        this.xRaySpeed = 0.02;
+        this.currentTask = null;
+        this.taskAttempts = 0;
+
         this.lastFrameTime = performance.now();
 
         this.sections = [];
@@ -1611,6 +1634,40 @@ class App {
                 document.getElementById('toggleSelectedFacesBtn').classList.remove('active');
             }
             document.getElementById('toggleManualModeBtn').classList.toggle('active', this.showManualMode);
+        };
+
+        // Educational: X-Ray mode
+        document.getElementById('toggleXRayBtn').onclick = () => {
+            this.showXRay = !this.showXRay;
+            document.getElementById('toggleXRayBtn').classList.toggle('active', this.showXRay);
+            if (this.showXRay) {
+                this.currentExplanation = "💡 Режим 'Рентген': сечение просвечивает фигуру, показывая внутреннюю структуру";
+            } else {
+                this.currentExplanation = "";
+            }
+        };
+
+        // Educational: Task Generator
+        document.getElementById('generateTaskBtn').onclick = () => {
+            const taskPanel = document.getElementById('taskPanel');
+            if (taskPanel.style.display === 'none') {
+                taskPanel.style.display = 'block';
+                this.generateNewTask();
+            } else {
+                taskPanel.style.display = 'none';
+            }
+        };
+
+        document.getElementById('newTaskBtn').onclick = () => {
+            this.generateNewTask();
+        };
+
+        document.getElementById('checkTaskBtn').onclick = () => {
+            this.checkCurrentTask();
+        };
+
+        document.getElementById('showHintBtn').onclick = () => {
+            this.showTaskHint();
         };
 
         // Step control buttons
@@ -3704,6 +3761,220 @@ ${p.hostType === 'edge'
                 this.drawLabel(this.getVertexName(i), p.x + 8, p.y - 8, '#f8fafc', 'rgba(15, 23, 42, 0.88)');
             }
         });
+
+        // X-Ray effect rendering
+        if (this.showXRay && this.activeSection?.built) {
+            this.drawXRayEffect(rotated, faceVisible);
+        }
+    }
+
+    // ==================== EDUCATIONAL: X-RAY EFFECT ====================
+    drawXRayEffect(rotated, faceVisible) {
+        this.xRayPhase += this.xRaySpeed;
+        const pulse = (Math.sin(this.xRayPhase) + 1) / 2; // 0..1
+        
+        const section = this.activeSection;
+        if (!section.polygon || section.polygon.length < 3) return;
+
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+
+        // Draw glowing section polygon
+        const projPoints = section.polygon.map(p => 
+            p.rotate(this.rotX, this.rotY).project(w, h, this.cameraDistance, this.zoom)
+        );
+
+        // Outer glow
+        for (let layer = 3; layer >= 1; layer--) {
+            const alpha = 0.15 * pulse * (layer / 3);
+            const offset = layer * 4;
+            this.ctx.beginPath();
+            projPoints.forEach((p, i) => {
+                if (i === 0) this.ctx.moveTo(p.x, p.y);
+                else this.ctx.lineTo(p.x, p.y);
+            });
+            this.ctx.closePath();
+            this.ctx.strokeStyle = `rgba(59, 130, 246, ${alpha})`;
+            this.ctx.lineWidth = 8 + offset;
+            this.ctx.lineCap = 'round';
+            this.ctx.lineJoin = 'round';
+            this.ctx.stroke();
+        }
+
+        // Main section with transparency
+        this.ctx.beginPath();
+        projPoints.forEach((p, i) => {
+            if (i === 0) this.ctx.moveTo(p.x, p.y);
+            else this.ctx.lineTo(p.x, p.y);
+        });
+        this.ctx.closePath();
+        
+        const gradient = this.ctx.createRadialGradient(
+            projPoints[0].x, projPoints[0].y, 0,
+            projPoints[0].x, projPoints[0].y, 200
+        );
+        gradient.addColorStop(0, `rgba(59, 130, 246, ${0.4 + pulse * 0.3})`);
+        gradient.addColorStop(1, `rgba(59, 130, 246, ${0.1 + pulse * 0.2})`);
+        
+        this.ctx.fillStyle = gradient;
+        this.ctx.fill();
+        this.ctx.strokeStyle = `rgba(147, 197, 253, ${0.7 + pulse * 0.3})`;
+        this.ctx.lineWidth = 3;
+        this.ctx.stroke();
+
+        // Draw "X-Ray" label
+        this.drawOverlayCaption('💡 РЕНТГЕН', 'Внутренняя структура видна');
+
+        // Make shape faces semi-transparent
+        this.ctx.save();
+        this.ctx.globalAlpha = 0.3;
+        // Faces are already drawn, this just adds a tint
+        this.ctx.restore();
+    }
+
+    // ==================== EDUCATIONAL: TASK GENERATOR ====================
+    generateNewTask() {
+        const taskTypes = [
+            {
+                type: 'build_section',
+                title: 'Построение сечения',
+                descriptions: [
+                    'Постройте сечение фигуры плоскостью, проходящей через три указанные точки на рёбрах.',
+                    'Используйте метод следов для построения сечения через точки на основании и боковых рёбрах.',
+                    'Постройте сечение, используя метод вспомогательных плоскостей.'
+                ],
+                check: () => this.checkBuildSectionTask()
+            },
+            {
+                type: 'find_area',
+                title: 'Площадь сечения',
+                descriptions: [
+                    'Постройте сечение и найдите его площадь. Введите ответ в квадратных единицах.',
+                    'Определите площадь сечения, проходящего через центр фигуры параллельно основанию.'
+                ],
+                check: () => this.checkAreaTask()
+            },
+            {
+                type: 'identify_method',
+                title: 'Выбор метода',
+                descriptions: [
+                    'Определите, какой метод построения сечения наиболее эффективен для данной конфигурации точек.',
+                    'Обоснуйте выбор метода построения сечения.'
+                ],
+                check: () => this.checkMethodTask()
+            }
+        ];
+
+        const shapes = ['cube', 'pyramid', 'prism', 'tetrahedron'];
+        const randomShape = shapes[Math.floor(Math.random() * shapes.length)];
+        const randomTaskType = taskTypes[Math.floor(Math.random() * taskTypes.length)];
+        const randomDesc = randomTaskType.descriptions[Math.floor(Math.random() * randomTaskType.descriptions.length)];
+
+        this.currentTask = {
+            ...randomTaskType,
+            shape: randomShape,
+            description: randomDesc,
+            attempts: 0,
+            completed: false,
+            hint: this.getTaskHint(randomTaskType.type)
+        };
+
+        // Set the shape if different
+        if (this.shapeType !== randomShape) {
+            this.setShape(randomShape);
+        }
+
+        // Update UI
+        document.getElementById('taskDescription').textContent = 
+            `${randomTaskType.title}: ${randomDesc}`;
+        document.getElementById('taskFeedback').style.display = 'none';
+        document.getElementById('taskHint').style.display = 'none';
+        this.taskAttempts = 0;
+    }
+
+    getTaskHint(taskType) {
+        const hints = {
+            build_section: '💡 Подсказка: Найдите точки пересечения секущей плоскости с рёбрами фигуры, затем соедините их последовательно.',
+            find_area: '💡 Подсказка: Постройте сечение, определите его форму и используйте соответствующую формулу площади.',
+            identify_method: '💡 Подсказка: Если есть две точки на основании — используйте метод следов. Если точки на разных гранях — метод вспомогательных плоскостей.'
+        };
+        return hints[taskType] || '💡 Подсказка: Внимательно изучите расположение точек на фигуре.';
+    }
+
+    checkBuildSectionTask() {
+        const section = this.activeSection;
+        if (!section || !section.built) {
+            this.showTaskFeedback('❌ Сечение ещё не построено. Добавьте точки и нажмите "Построить сечение".', 'error');
+            return false;
+        }
+        if (section.polygon.length < 3) {
+            this.showTaskFeedback('❌ Сечение должно иметь хотя бы 3 вершины.', 'error');
+            return false;
+        }
+        this.showTaskFeedback('✅ Верно! Сечение построено корректно.', 'success');
+        this.currentTask.completed = true;
+        return true;
+    }
+
+    checkAreaTask() {
+        const section = this.activeSection;
+        if (!section || !section.built) {
+            this.showTaskFeedback('❌ Сначала постройте сечение.', 'error');
+            return false;
+        }
+        const area = Math.round(section.area);
+        this.showTaskFeedback(`📐 Площадь сечения: ${area.toFixed(2)} кв. ед.`, 'success');
+        this.currentTask.completed = true;
+        return true;
+    }
+
+    checkMethodTask() {
+        const section = this.activeSection;
+        if (!section || !section.built) {
+            this.showTaskFeedback('❌ Постройте сечение для анализа.', 'error');
+            return false;
+        }
+        
+        let methodUsed = 'не определён';
+        if (this.showTraceMethod) methodUsed = 'метод следов';
+        else if (this.showAuxiliaryPlaneMethod) methodUsed = 'метод вспомогательных плоскостей';
+        else if (this.showCombinedMethod) methodUsed = 'комбинированный метод';
+        else methodUsed = 'стандартный метод';
+
+        this.showTaskFeedback(`✅ Использован: ${methodUsed}. Площадь: ${section.area.toFixed(2)} кв. ед.`, 'success');
+        this.currentTask.completed = true;
+        return true;
+    }
+
+    checkCurrentTask() {
+        if (!this.currentTask) {
+            this.showTaskFeedback('❌ Сначала создайте задачу.', 'error');
+            return;
+        }
+        this.taskAttempts++;
+        this.currentTask.check();
+    }
+
+    showTaskHint() {
+        if (!this.currentTask) {
+            this.showTaskFeedback('❌ Сначала создайте задачу.', 'error');
+            return;
+        }
+        const hintEl = document.getElementById('taskHint');
+        hintEl.textContent = this.currentTask.hint;
+        hintEl.style.display = 'block';
+    }
+
+    showTaskFeedback(message, type) {
+        const feedbackEl = document.getElementById('taskFeedback');
+        feedbackEl.textContent = message;
+        feedbackEl.style.display = 'block';
+        feedbackEl.style.backgroundColor = type === 'success' 
+            ? 'rgba(16, 185, 129, 0.2)' 
+            : 'rgba(239, 68, 68, 0.2)';
+        feedbackEl.style.color = type === 'success' 
+            ? '#10b981' 
+            : '#ef4444';
     }
 }
 
