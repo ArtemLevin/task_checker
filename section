@@ -1,0 +1,2865 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🔷 3D Сечения Геометрических Фигур</title>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: rgba(30, 41, 59, 0.8);
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.4);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        .container {
+            max-width: 1540px;
+            margin: 0 auto;
+            padding: 1rem;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 1rem;
+            flex-shrink: 0;
+        }
+        h1 {
+            font-size: 2rem;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.25rem;
+        }
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        .main-grid {
+            display: grid;
+            grid-template-columns: 340px 1fr 380px;
+            gap: 1rem;
+            flex-grow: 1;
+            min-height: 0;
+        }
+        @media (max-width: 1280px) {
+            .main-grid { grid-template-columns: 1fr; overflow-y: auto; }
+            body { overflow: auto; }
+        }
+        .panel {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .panel-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-bottom: 0.9rem;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+        .shape-selector,
+        .mode-selector {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .shape-btn,
+        .mode-btn,
+        .section-tab-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 0.6rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.84rem;
+            text-align: center;
+        }
+        .shape-btn:hover,
+        .mode-btn:hover,
+        .section-tab-btn:hover {
+            background: var(--accent);
+        }
+        .shape-btn.active,
+        .mode-btn.active,
+        .section-tab-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+        .control-group { margin-bottom: 1rem; }
+        label {
+            display: block;
+            margin-bottom: 0.4rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: var(--bg-secondary);
+            border-radius: 2px;
+            appearance: none;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        select,
+        input[type="number"] {
+            width: 100%;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.55rem;
+            font-size: 0.84rem;
+        }
+        .equation-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .equation-help {
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            margin-top: -0.3rem;
+            margin-bottom: 1rem;
+        }
+        .canvas-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            flex-grow: 1;
+            min-height: 460px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+        #mainCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            cursor: crosshair;
+            touch-action: none;
+        }
+        .toolbar {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+            flex-shrink: 0;
+        }
+        .tool-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 0.55rem 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+            flex: 1;
+            text-align: center;
+        }
+        .tool-btn:hover { background: var(--accent); }
+        .tool-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+        .tool-btn.danger {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: var(--error);
+            color: var(--error);
+        }
+        .tool-btn.danger:hover {
+            background: var(--error);
+            color: white;
+        }
+        .instruction {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid var(--warning);
+            border-radius: 6px;
+            padding: 0.8rem;
+            margin-bottom: 1rem;
+            font-size: 0.84rem;
+            color: #fcd34d;
+            flex-shrink: 0;
+        }
+        .sections-list,
+        .points-list {
+            background: rgba(15, 23, 42, 0.18);
+            border-radius: 8px;
+            padding: 0.4rem;
+            margin-bottom: 1rem;
+            overflow-y: auto;
+        }
+        .sections-list {
+            min-height: 100px;
+            max-height: 190px;
+        }
+        .points-list {
+            min-height: 120px;
+            max-height: 260px;
+        }
+        .section-item {
+            background: var(--bg-secondary);
+            padding: 0.55rem;
+            border-radius: 6px;
+            margin-bottom: 0.45rem;
+            border-left: 4px solid transparent;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .section-item.active {
+            outline: 1px solid var(--accent);
+        }
+        .section-meta {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+        }
+        .section-badge {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.7);
+            display: inline-block;
+            margin-right: 0.4rem;
+            vertical-align: middle;
+        }
+        .point-item {
+            background: var(--bg-secondary);
+            padding: 0.6rem;
+            border-radius: 6px;
+            margin-bottom: 0.4rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 3px solid var(--accent);
+            font-size: 0.88rem;
+        }
+        .remove-btn {
+            background: var(--error);
+            border: none;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 0.7rem;
+            flex-shrink: 0;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin-top: auto;
+            flex-shrink: 0;
+        }
+        .stat-item {
+            background: var(--bg-secondary);
+            padding: 0.55rem;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--accent);
+        }
+        .stat-label {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            70% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+        .click-feedback {
+            position: absolute;
+            color: var(--success);
+            font-weight: bold;
+            font-size: 14px;
+            pointer-events: none;
+            animation: popIn 0.8s ease-out forwards;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>🔷 3D Сечения</h1>
+        <p class="subtitle">Конструктор нескольких сечений многогранников и тел вращения</p>
+    </header>
+    <div class="main-grid">
+        <div class="panel">
+            <h2 class="panel-title">📐 Фигура</h2>
+            <div class="shape-selector">
+                <button class="shape-btn active" data-shape="cube">Куб</button>
+                <button class="shape-btn" data-shape="pyramid">Пирамида</button>
+                <button class="shape-btn" data-shape="hexagonalPyramid">6-уг. пирамида</button>
+                <button class="shape-btn" data-shape="prism">Призма</button>
+                <button class="shape-btn" data-shape="tetrahedron">Тетраэдр</button>
+                <button class="shape-btn" data-shape="cylinder">Цилиндр</button>
+                <button class="shape-btn" data-shape="cone">Конус</button>
+                <button class="shape-btn" data-shape="sphere">Шар</button>
+            </div>
+
+            <h2 class="panel-title">📍 Режим точки</h2>
+            <div class="mode-selector">
+                <button class="mode-btn active" data-mode="edge">По рёбрам</button>
+                <button class="mode-btn" data-mode="face">По граням</button>
+            </div>
+
+            <h2 class="panel-title">⚙️ Параметры</h2>
+            <div class="control-group">
+                <label>Размер: <span id="sizeValue">200</span></label>
+                <input type="range" id="sizeSlider" min="100" max="300" value="200">
+            </div>
+            <div class="control-group">
+                <label>Поворот X: <span id="rotXValue">-30</span>°</label>
+                <input type="range" id="rotXSlider" min="-180" max="180" value="-30">
+            </div>
+            <div class="control-group">
+                <label>Поворот Y: <span id="rotYValue">45</span>°</label>
+                <input type="range" id="rotYSlider" min="-180" max="180" value="45">
+            </div>
+            <div class="control-group">
+                <label>Толщина линий фигуры: <span id="edgeThicknessValue">2</span></label>
+                <input type="range" id="edgeThicknessSlider" min="1" max="6" step="0.5" value="2">
+            </div>
+
+            <h2 class="panel-title">🧮 Построение по уравнению</h2>
+            <div class="equation-grid">
+                <input type="number" id="planeA" value="1" step="1" placeholder="A">
+                <input type="number" id="planeB" value="1" step="1" placeholder="B">
+                <input type="number" id="planeC" value="1" step="1" placeholder="C">
+                <input type="number" id="planeD" value="0" step="1" placeholder="D">
+            </div>
+            <div class="equation-help">Уравнение задаётся в виде Ax + By + Cz + D = 0, где A, B, C, D — целые числа.</div>
+
+            <div class="toolbar" style="margin-top:0; margin-bottom:1rem;">
+                <button class="tool-btn" id="buildEquationBtn">🧮 Построить по уравнению</button>
+                <button class="tool-btn danger" id="clearCurrentBtn">🧹 Очистить текущее</button>
+            </div>
+
+            <div class="toolbar">
+                <button class="tool-btn" id="newSectionBtn">➕ Новое сечение</button>
+                <button class="tool-btn" id="buildSectionBtn">✂️ Построить текущее</button>
+                <button class="tool-btn danger" id="deleteSectionBtn">🗑️ Удалить текущее</button>
+            </div>
+
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="sectionsCount">1</div>
+                    <div class="stat-label">Сечений</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="activePointsCount">0</div>
+                    <div class="stat-label">Точек в текущем</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="builtCount">0</div>
+                    <div class="stat-label">Построено</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel" style="padding: 0; background: transparent; border: none; box-shadow: none;">
+            <div class="canvas-container">
+                <canvas id="mainCanvas"></canvas>
+            </div>
+
+            <div class="toolbar" style="background: var(--bg-card); padding: 1rem; border-radius: 12px; margin-top: 1rem; border: 1px solid var(--border);">
+                <button class="tool-btn" id="resetViewBtn">🔄 Вид спереди</button>
+                <button class="tool-btn" id="autoRotateBtn">🌀 Автовращение</button>
+                <button class="tool-btn" id="resetZoomBtn">🔍 Сброс зума</button>
+                <button class="tool-btn" id="toggleWireframeBtn">👁️ Сплошной/Каркас</button>
+                <button class="tool-btn" id="toggleWarmLightBtn">☀️ Тёплая подсветка</button>
+                <button class="tool-btn" id="toggleLabelsBtn">🔤 Подписи вершин/точек</button>
+                <button class="tool-btn" id="toggleConstructionStepsBtn">👣 Пошаговое построение</button>
+                <button class="tool-btn" id="toggleTraceMethodBtn">🧭 Метод следов</button>
+                <button class="tool-btn" id="toggleAuxiliaryPlaneBtn">🪟 Вспомогательная плоскость</button>
+            </div>
+
+            <div style="background: var(--bg-card); padding: 1rem; border-radius: 12px; margin-top: 1rem; border: 1px solid var(--border);">
+                <div class="control-group" style="margin-bottom:0;">
+                    <label>Скорость вращения: <span id="autoRotateSpeedValue">0.6</span></label>
+                    <input type="range" id="autoRotateSpeedSlider" min="0.1" max="5" step="0.1" value="0.6">
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2 class="panel-title">🧩 Сечения</h2>
+            <div class="sections-list" id="sectionsList"></div>
+
+            <div id="sectionInfo" style="display: none; background: rgba(59, 130, 246, 0.1); border: 1px solid var(--accent); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                <strong style="color: var(--accent);">Текущее сечение</strong>
+                <p id="sectionDetails" style="font-size: 0.85rem; margin-top: 0.5rem; color: var(--text-secondary);"></p>
+            </div>
+
+            <div class="instruction">
+                💡 <strong>Как работать:</strong><br>
+                1. Создайте новое сечение.<br>
+                2. Либо поставьте точки по рёбрам/граням, либо задайте уравнение плоскости.<br>
+                3. Постройте текущее сечение.<br>
+                4. Можно включить пошаговый показ, метод следов или вспомогательную плоскость.<br>
+                5. Метод следов и вспомогательная плоскость полноценно работают для многогранников.
+            </div>
+
+            <h2 class="panel-title">📍 Точки текущего сечения</h2>
+            <div class="points-list" id="pointsList">
+                <p style="color: var(--text-secondary); text-align: center; padding: 1rem; font-size: 0.9rem;">Нет точек</p>
+            </div>
+
+            <h2 class="panel-title">🎨 Стиль текущего</h2>
+            <div class="control-group">
+                <label>Прозрачность: <span id="opacityValue">0.6</span></label>
+                <input type="range" id="opacitySlider" min="0.1" max="1" step="0.1" value="0.6">
+            </div>
+            <div class="control-group">
+                <label>Цвет текущего сечения:</label>
+                <input type="color" id="sectionColor" value="#3b82f6" style="width: 100%; height: 35px; border: none; background: none;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+class Point3D {
+    constructor(x, y, z) {
+        this.x = x; this.y = y; this.z = z;
+    }
+    clone() { return new Point3D(this.x, this.y, this.z); }
+    add(p) { return new Point3D(this.x + p.x, this.y + p.y, this.z + p.z); }
+    sub(p) { return new Point3D(this.x - p.x, this.y - p.y, this.z - p.z); }
+    scale(k) { return new Point3D(this.x * k, this.y * k, this.z * k); }
+    dot(p) { return this.x * p.x + this.y * p.y + this.z * p.z; }
+    cross(p) {
+        return new Point3D(
+            this.y * p.z - this.z * p.y,
+            this.z * p.x - this.x * p.z,
+            this.x * p.y - this.y * p.x
+        );
+    }
+    length() { return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z); }
+    normalize() {
+        const len = this.length();
+        if (len < 1e-9) return new Point3D(0, 0, 0);
+        return this.scale(1 / len);
+    }
+    distanceTo(p) { return this.sub(p).length(); }
+    rotateX(angle) {
+        const rad = angle * Math.PI / 180;
+        const c = Math.cos(rad), s = Math.sin(rad);
+        return new Point3D(this.x, this.y * c - this.z * s, this.y * s + this.z * c);
+    }
+    rotateY(angle) {
+        const rad = angle * Math.PI / 180;
+        const c = Math.cos(rad), s = Math.sin(rad);
+        return new Point3D(this.x * c + this.z * s, this.y, -this.x * s + this.z * c);
+    }
+    rotate(rx, ry) { return this.rotateX(rx).rotateY(ry); }
+    project(w, h, cameraDistance = 500, zoom = 1) {
+        const z = this.z + cameraDistance;
+        const safeZ = Math.max(z, 1);
+        const f = (cameraDistance * zoom) / safeZ;
+        return { x: w / 2 + this.x * f, y: h / 2 - this.y * f, z: this.z, f };
+    }
+}
+
+class Edge {
+    constructor(v1, v2, idx, v1Index, v2Index) {
+        this.v1 = v1;
+        this.v2 = v2;
+        this.idx = idx;
+        this.v1Index = v1Index;
+        this.v2Index = v2Index;
+        this.faceIndices = [];
+    }
+    isHovered(x, y, projV1, projV2, threshold = 10) {
+        const A = x - projV1.x;
+        const B = y - projV1.y;
+        const C = projV2.x - projV1.x;
+        const D = projV2.y - projV1.y;
+        const dot = A * C + B * D;
+        const lenSq = C * C + D * D;
+        let param = -1;
+        if (lenSq !== 0) param = dot / lenSq;
+        let xx, yy;
+        if (param < 0) { xx = projV1.x; yy = projV1.y; }
+        else if (param > 1) { xx = projV2.x; yy = projV2.y; }
+        else { xx = projV1.x + param * C; yy = projV1.y + param * D; }
+        const dx = x - xx;
+        const dy = y - yy;
+        return Math.sqrt(dx * dx + dy * dy) < threshold;
+    }
+    projectParamFromScreen(x, y, projV1, projV2) {
+        const A = x - projV1.x;
+        const B = y - projV1.y;
+        const C = projV2.x - projV1.x;
+        const D = projV2.y - projV1.y;
+        const lenSq = C * C + D * D;
+        if (lenSq < 1e-9) return 0;
+        return (A * C + B * D) / lenSq;
+    }
+    getPointAt(param) {
+        const p = new Point3D(
+            this.v1.x + (this.v2.x - this.v1.x) * param,
+            this.v1.y + (this.v2.y - this.v1.y) * param,
+            this.v1.z + (this.v2.z - this.v1.z) * param
+        );
+        p.hostType = 'edge';
+        p.edgeIdx = this.idx;
+        p.param = param;
+        return p;
+    }
+}
+
+class Shape {
+    constructor() {
+        this.vertices = [];
+        this.edges = [];
+        this.faces = [];
+    }
+    buildConnectivity() {
+        this.edges.forEach(e => e.faceIndices = []);
+        this.faces.forEach((face, fIdx) => {
+            for (let i = 0; i < face.length; i++) {
+                const a = face[i];
+                const b = face[(i + 1) % face.length];
+                const edgeIdx = this.edges.findIndex(e =>
+                    (e.v1Index === a && e.v2Index === b) ||
+                    (e.v1Index === b && e.v2Index === a)
+                );
+                if (edgeIdx !== -1) this.edges[edgeIdx].faceIndices.push(fIdx);
+            }
+        });
+    }
+    rotate(rx, ry) {
+        return this.vertices.map(v => v.rotate(rx, ry));
+    }
+}
+
+class Cube extends Shape {
+    constructor(s) {
+        super();
+        const h = s / 2;
+        this.vertices = [
+            new Point3D(-h,-h,-h), new Point3D(h,-h,-h), new Point3D(h,h,-h), new Point3D(-h,h,-h),
+            new Point3D(-h,-h,h),  new Point3D(h,-h,h),  new Point3D(h,h,h),  new Point3D(-h,h,h)
+        ];
+        const idx = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+        this.edges = idx.map((pair, i) => new Edge(this.vertices[pair[0]], this.vertices[pair[1]], i, pair[0], pair[1]));
+        this.faces = [[0,1,2,3],[4,5,6,7],[0,1,5,4],[2,3,7,6],[0,3,7,4],[1,2,6,5]];
+        this.buildConnectivity();
+    }
+}
+
+class Pyramid extends Shape {
+    constructor(s) {
+        super();
+        const h = s / 2, H = s;
+        this.vertices = [
+            new Point3D(-h,-h,-h), new Point3D(h,-h,-h), new Point3D(h,-h,h), new Point3D(-h,-h,h),
+            new Point3D(0,H,0)
+        ];
+        const idx = [[0,1],[1,2],[2,3],[3,0],[0,4],[1,4],[2,4],[3,4]];
+        this.edges = idx.map((pair, i) => new Edge(this.vertices[pair[0]], this.vertices[pair[1]], i, pair[0], pair[1]));
+        this.faces = [[0,1,2,3],[0,1,4],[1,2,4],[2,3,4],[3,0,4]];
+        this.buildConnectivity();
+    }
+}
+
+class HexagonalPyramid extends Shape {
+    constructor(s) {
+        super();
+        const r = s / 2;
+        const baseY = -s / 2;
+        const apexY = s / 2;
+        for (let i = 0; i < 6; i++) {
+            const a = (2 * Math.PI * i) / 6;
+            this.vertices.push(new Point3D(r * Math.cos(a), baseY, r * Math.sin(a)));
+        }
+        const apexIndex = this.vertices.length;
+        this.vertices.push(new Point3D(0, apexY, 0));
+        for (let i = 0; i < 6; i++) {
+            const next = (i + 1) % 6;
+            this.edges.push(new Edge(this.vertices[i], this.vertices[next], this.edges.length, i, next));
+        }
+        for (let i = 0; i < 6; i++) {
+            this.edges.push(new Edge(this.vertices[i], this.vertices[apexIndex], this.edges.length, i, apexIndex));
+        }
+        this.faces.push([0,1,2,3,4,5]);
+        for (let i = 0; i < 6; i++) {
+            const next = (i + 1) % 6;
+            this.faces.push([i, next, apexIndex]);
+        }
+        this.buildConnectivity();
+    }
+}
+
+class Prism extends Shape {
+    constructor(s) {
+        super();
+        const h = s / 2, H = s * 0.8;
+        this.vertices = [
+            new Point3D(-h,-H/2,-h), new Point3D(h,-H/2,-h), new Point3D(0,-H/2,h),
+            new Point3D(-h,H/2,-h),  new Point3D(h,H/2,-h),  new Point3D(0,H/2,h)
+        ];
+        const idx = [[0,1],[1,2],[2,0],[3,4],[4,5],[5,3],[0,3],[1,4],[2,5]];
+        this.edges = idx.map((pair, i) => new Edge(this.vertices[pair[0]], this.vertices[pair[1]], i, pair[0], pair[1]));
+        this.faces = [[0,1,2],[3,4,5],[0,1,4,3],[1,2,5,4],[2,0,3,5]];
+        this.buildConnectivity();
+    }
+}
+
+class Tetrahedron extends Shape {
+    constructor(s) {
+        super();
+        const h = s / 2, H = s * 0.866;
+        this.vertices = [
+            new Point3D(-h,-H/3,-h/1.732),
+            new Point3D(h,-H/3,-h/1.732),
+            new Point3D(0,-H/3,h*1.155),
+            new Point3D(0,H*2/3,0)
+        ];
+        const idx = [[0,1],[1,2],[2,0],[0,3],[1,3],[2,3]];
+        this.edges = idx.map((pair, i) => new Edge(this.vertices[pair[0]], this.vertices[pair[1]], i, pair[0], pair[1]));
+        this.faces = [[0,1,2],[0,1,3],[1,2,3],[2,0,3]];
+        this.buildConnectivity();
+    }
+}
+
+class Cylinder extends Shape {
+    constructor(s, segments = 24) {
+        super();
+        const r = s / 2;
+        const h = s;
+        const topY = h / 2;
+        const bottomY = -h / 2;
+        for (let i = 0; i < segments; i++) {
+            const a = (2 * Math.PI * i) / segments;
+            this.vertices.push(new Point3D(r * Math.cos(a), topY, r * Math.sin(a)));
+        }
+        for (let i = 0; i < segments; i++) {
+            const a = (2 * Math.PI * i) / segments;
+            this.vertices.push(new Point3D(r * Math.cos(a), bottomY, r * Math.sin(a)));
+        }
+        for (let i = 0; i < segments; i++) {
+            const next = (i + 1) % segments;
+            this.edges.push(new Edge(this.vertices[i], this.vertices[next], this.edges.length, i, next));
+        }
+        for (let i = 0; i < segments; i++) {
+            const a = segments + i;
+            const b = segments + ((i + 1) % segments);
+            this.edges.push(new Edge(this.vertices[a], this.vertices[b], this.edges.length, a, b));
+        }
+        for (let i = 0; i < segments; i++) {
+            this.edges.push(new Edge(this.vertices[i], this.vertices[segments + i], this.edges.length, i, segments + i));
+        }
+        this.faces.push([...Array(segments).keys()]);
+        this.faces.push([...Array(segments).keys()].map(i => segments + (segments - 1 - i)));
+        for (let i = 0; i < segments; i++) {
+            const next = (i + 1) % segments;
+            this.faces.push([i, next, segments + next, segments + i]);
+        }
+        this.buildConnectivity();
+    }
+}
+
+class Cone extends Shape {
+    constructor(s, segments = 24) {
+        super();
+        const r = s / 2;
+        const h = s;
+        const baseY = -h / 2;
+        const apexY = h / 2;
+        for (let i = 0; i < segments; i++) {
+            const a = (2 * Math.PI * i) / segments;
+            this.vertices.push(new Point3D(r * Math.cos(a), baseY, r * Math.sin(a)));
+        }
+        const apexIndex = this.vertices.length;
+        this.vertices.push(new Point3D(0, apexY, 0));
+        for (let i = 0; i < segments; i++) {
+            const next = (i + 1) % segments;
+            this.edges.push(new Edge(this.vertices[i], this.vertices[next], this.edges.length, i, next));
+        }
+        for (let i = 0; i < segments; i++) {
+            this.edges.push(new Edge(this.vertices[i], this.vertices[apexIndex], this.edges.length, i, apexIndex));
+        }
+        this.faces.push([...Array(segments).keys()]);
+        for (let i = 0; i < segments; i++) {
+            const next = (i + 1) % segments;
+            this.faces.push([i, next, apexIndex]);
+        }
+        this.buildConnectivity();
+    }
+}
+
+class Sphere extends Shape {
+    constructor(s, latSegments = 10, lonSegments = 16) {
+        super();
+        const r = s / 2;
+        const topIndex = this.vertices.length;
+        this.vertices.push(new Point3D(0, r, 0));
+        const ringIndices = [];
+        for (let lat = 1; lat < latSegments; lat++) {
+            const phi = Math.PI * lat / latSegments;
+            const y = r * Math.cos(phi);
+            const rr = r * Math.sin(phi);
+            const ring = [];
+            for (let lon = 0; lon < lonSegments; lon++) {
+                const theta = 2 * Math.PI * lon / lonSegments;
+                const x = rr * Math.cos(theta);
+                const z = rr * Math.sin(theta);
+                ring.push(this.vertices.length);
+                this.vertices.push(new Point3D(x, y, z));
+            }
+            ringIndices.push(ring);
+        }
+        const bottomIndex = this.vertices.length;
+        this.vertices.push(new Point3D(0, -r, 0));
+        for (const ring of ringIndices) {
+            for (let i = 0; i < lonSegments; i++) {
+                const a = ring[i];
+                const b = ring[(i + 1) % lonSegments];
+                this.edges.push(new Edge(this.vertices[a], this.vertices[b], this.edges.length, a, b));
+            }
+        }
+        for (let k = 0; k < ringIndices.length - 1; k++) {
+            const ringA = ringIndices[k];
+            const ringB = ringIndices[k + 1];
+            for (let i = 0; i < lonSegments; i++) {
+                this.edges.push(new Edge(this.vertices[ringA[i]], this.vertices[ringB[i]], this.edges.length, ringA[i], ringB[i]));
+            }
+        }
+        if (ringIndices.length > 0) {
+            for (let i = 0; i < lonSegments; i++) {
+                this.edges.push(new Edge(this.vertices[topIndex], this.vertices[ringIndices[0][i]], this.edges.length, topIndex, ringIndices[0][i]));
+            }
+            const lastRing = ringIndices[ringIndices.length - 1];
+            for (let i = 0; i < lonSegments; i++) {
+                this.edges.push(new Edge(this.vertices[lastRing[i]], this.vertices[bottomIndex], this.edges.length, lastRing[i], bottomIndex));
+            }
+        }
+        if (ringIndices.length > 0) {
+            const firstRing = ringIndices[0];
+            for (let i = 0; i < lonSegments; i++) {
+                const next = (i + 1) % lonSegments;
+                this.faces.push([topIndex, firstRing[next], firstRing[i]]);
+            }
+            for (let k = 0; k < ringIndices.length - 1; k++) {
+                const ringA = ringIndices[k];
+                const ringB = ringIndices[k + 1];
+                for (let i = 0; i < lonSegments; i++) {
+                    const next = (i + 1) % lonSegments;
+                    this.faces.push([ringA[i], ringA[next], ringB[next], ringB[i]]);
+                }
+            }
+            const lastRing = ringIndices[ringIndices.length - 1];
+            for (let i = 0; i < lonSegments; i++) {
+                const next = (i + 1) % lonSegments;
+                this.faces.push([lastRing[i], lastRing[next], bottomIndex]);
+            }
+        }
+        this.buildConnectivity();
+    }
+}
+
+function planeFrom3Points(a, b, c) {
+    const ab = b.sub(a);
+    const ac = c.sub(a);
+    const normal = ab.cross(ac);
+    const len = normal.length();
+    if (len < 1e-6) return null;
+    const n = normal.scale(1 / len);
+    const d = -n.dot(a);
+    return { n, d };
+}
+
+function signedDistanceToPlane(plane, p) {
+    return plane.n.dot(p) + plane.d;
+}
+
+function intersectSegmentPlane(a, b, plane, eps = 1e-7) {
+    const da = signedDistanceToPlane(plane, a);
+    const db = signedDistanceToPlane(plane, b);
+    if (Math.abs(da) < eps && Math.abs(db) < eps) return [a.clone(), b.clone()];
+    if (Math.abs(da) < eps) return [a.clone()];
+    if (Math.abs(db) < eps) return [b.clone()];
+    if (da * db > 0) return [];
+    const t = da / (da - db);
+    if (t < -eps || t > 1 + eps) return [];
+    return [new Point3D(
+        a.x + (b.x - a.x) * t,
+        a.y + (b.y - a.y) * t,
+        a.z + (b.z - a.z) * t
+    )];
+}
+
+function samePoint(a, b, eps = 1e-4) {
+    return a.distanceTo(b) < eps;
+}
+
+function uniquePoints(points, eps = 1e-4) {
+    const result = [];
+    for (const p of points) {
+        if (!result.some(q => samePoint(p, q, eps))) result.push(p);
+    }
+    return result;
+}
+
+function buildSectionPolygon(shape, plane) {
+    const raw = [];
+    for (const edge of shape.edges) {
+        const pts = intersectSegmentPlane(edge.v1, edge.v2, plane);
+        raw.push(...pts);
+    }
+    const points = uniquePoints(raw);
+    if (points.length < 3) return [];
+    let center = new Point3D(0, 0, 0);
+    for (const p of points) center = center.add(p);
+    center = center.scale(1 / points.length);
+    const n = plane.n.normalize();
+    const helper = Math.abs(n.x) < 0.9 ? new Point3D(1, 0, 0) : new Point3D(0, 1, 0);
+    const u = n.cross(helper).normalize();
+    const v = n.cross(u).normalize();
+    const withAngles = points.map(p => {
+        const d = p.sub(center);
+        const x = d.dot(u);
+        const y = d.dot(v);
+        return { p, angle: Math.atan2(y, x) };
+    });
+    withAngles.sort((a, b) => a.angle - b.angle);
+    return withAngles.map(item => item.p);
+}
+
+function polygonArea3D(points) {
+    if (!points || points.length < 3) return 0;
+    const p0 = points[0];
+    let area = 0;
+    for (let i = 1; i < points.length - 1; i++) {
+        const a = points[i].sub(p0);
+        const b = points[i + 1].sub(p0);
+        area += a.cross(b).length() / 2;
+    }
+    return area;
+}
+
+function gcd2(a, b) {
+    a = Math.abs(a);
+    b = Math.abs(b);
+    while (b !== 0) {
+        const t = a % b;
+        a = b;
+        b = t;
+    }
+    return a;
+}
+
+function gcdArray(arr) {
+    const nums = arr.map(v => Math.abs(Math.round(v))).filter(v => v !== 0);
+    if (nums.length === 0) return 1;
+    return nums.reduce((acc, v) => gcd2(acc, v), nums[0]);
+}
+
+function lcm2(a, b) {
+    if (a === 0 || b === 0) return 0;
+    return Math.abs(a * b) / gcd2(a, b);
+}
+
+function approximateFraction(x, maxDen = 1000) {
+    if (!isFinite(x)) return { num: 0, den: 1 };
+    if (Math.abs(x) < 1e-12) return { num: 0, den: 1 };
+    let bestNum = Math.round(x);
+    let bestDen = 1;
+    let bestErr = Math.abs(x - bestNum);
+    for (let den = 1; den <= maxDen; den++) {
+        const num = Math.round(x * den);
+        const err = Math.abs(x - num / den);
+        if (err < bestErr) {
+            bestErr = err;
+            bestNum = num;
+            bestDen = den;
+            if (err < 1e-10) break;
+        }
+    }
+    const g = gcd2(bestNum, bestDen);
+    return { num: bestNum / g, den: bestDen / g };
+}
+
+function planeToIntegerCoefficients(plane) {
+    const fracs = [plane.n.x, plane.n.y, plane.n.z, plane.d].map(v => approximateFraction(v, 1000));
+    let lcm = 1;
+    for (const f of fracs) lcm = lcm2(lcm, f.den);
+    let coeffs = fracs.map(f => f.num * (lcm / f.den));
+    coeffs = coeffs.map(v => Math.round(v));
+    const g = gcdArray(coeffs);
+    coeffs = coeffs.map(v => v / g);
+    const firstNonZero = coeffs.find(v => v !== 0) || 1;
+    if (firstNonZero < 0) coeffs = coeffs.map(v => -v);
+    return { A: coeffs[0], B: coeffs[1], C: coeffs[2], D: coeffs[3] };
+}
+
+function planeFromIntegerCoefficients(A, B, C, D) {
+    const len = Math.sqrt(A * A + B * B + C * C);
+    if (len < 1e-9) return null;
+    return {
+        n: new Point3D(A / len, B / len, C / len),
+        d: D / len
+    };
+}
+
+function formatSignedTerm(value, variable, isFirst = false) {
+    if (value === 0) return '';
+    const sign = value < 0 ? '-' : (isFirst ? '' : '+');
+    const abs = Math.abs(value);
+    const coeff = abs === 1 ? '' : String(abs);
+    return `${sign}${coeff}${variable}`;
+}
+
+function formatPlaneEquation(coeffs) {
+    const terms = [];
+    if (coeffs.A !== 0) terms.push(formatSignedTerm(coeffs.A, 'x', terms.length === 0));
+    if (coeffs.B !== 0) terms.push(formatSignedTerm(coeffs.B, 'y', terms.length === 0));
+    if (coeffs.C !== 0) terms.push(formatSignedTerm(coeffs.C, 'z', terms.length === 0));
+    if (coeffs.D !== 0 || terms.length === 0) {
+        const sign = coeffs.D < 0 ? '-' : (terms.length === 0 ? '' : '+');
+        terms.push(`${sign}${Math.abs(coeffs.D)}`);
+    }
+    return `${terms.join(' ')} = 0`;
+}
+
+function polygonCenter(points) {
+    if (!points || points.length === 0) return new Point3D(0, 0, 0);
+    let c = new Point3D(0, 0, 0);
+    for (const p of points) c = c.add(p);
+    return c.scale(1 / points.length);
+}
+
+function lineFromTwoPlanes(plane1, plane2) {
+    const n1 = plane1.n.normalize();
+    const n2 = plane2.n.normalize();
+    const dir = n1.cross(n2);
+    if (dir.length() < 1e-8) return null;
+
+    const absDir = { x: Math.abs(dir.x), y: Math.abs(dir.y), z: Math.abs(dir.z) };
+    let p = null;
+
+    if (absDir.x >= absDir.y && absDir.x >= absDir.z) {
+        const det = n1.y * n2.z - n1.z * n2.y;
+        if (Math.abs(det) < 1e-9) return null;
+        const y = ((-plane1.d) * n2.z - n1.z * (-plane2.d)) / det;
+        const z = (n1.y * (-plane2.d) - (-plane1.d) * n2.y) / det;
+        p = new Point3D(0, y, z);
+    } else if (absDir.y >= absDir.x && absDir.y >= absDir.z) {
+        const det = n1.x * n2.z - n1.z * n2.x;
+        if (Math.abs(det) < 1e-9) return null;
+        const x = ((-plane1.d) * n2.z - n1.z * (-plane2.d)) / det;
+        const z = (n1.x * (-plane2.d) - (-plane1.d) * n2.x) / det;
+        p = new Point3D(x, 0, z);
+    } else {
+        const det = n1.x * n2.y - n1.y * n2.x;
+        if (Math.abs(det) < 1e-9) return null;
+        const x = ((-plane1.d) * n2.y - n1.y * (-plane2.d)) / det;
+        const y = (n1.x * (-plane2.d) - (-plane1.d) * n2.x) / det;
+        p = new Point3D(x, y, 0);
+    }
+
+    return { point: p, dir: dir.normalize() };
+}
+
+class App {
+    constructor() {
+        this.canvas = document.getElementById('mainCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.container = this.canvas.parentElement;
+
+        this.shapeType = 'cube';
+        this.shape = new Cube(200);
+        this.pointPlacementMode = 'edge';
+        this.rotX = -30;
+        this.rotY = 45;
+        this.size = 200;
+        this.cameraDistance = 500;
+        this.zoom = 1;
+        this.minZoom = 0.05;
+        this.maxZoom = 500;
+        this.edgeThickness = 2;
+        this.warmLight = false;
+        this.isDragging = false;
+        this.mouseDown = false;
+        this.lastX = 0;
+        this.lastY = 0;
+        this.hoveredEdgeIdx = -1;
+        this.hoveredFaceIdx = -1;
+        this.hoveredPointIdx = -1;
+        this.draggingPointIdx = -1;
+        this.wireframeOnly = false;
+        this.showLabels = false;
+        this.autoRotate = false;
+        this.autoRotateSpeed = 0.6;
+        this.lastTouchDistance = null;
+
+        this.showConstructionSteps = false;
+        this.constructionStepIndex = 0;
+        this.constructionStepElapsed = 0;
+        this.constructionStepDuration = 800;
+
+        this.showTraceMethod = false;
+        this.traceStepIndex = 0;
+        this.traceStepElapsed = 0;
+        this.traceStepDuration = 1100;
+
+        this.showAuxiliaryPlaneMethod = false;
+        this.auxStepIndex = 0;
+        this.auxStepElapsed = 0;
+        this.auxStepDuration = 1200;
+
+        this.lastFrameTime = performance.now();
+
+        this.sections = [];
+        this.activeSectionIndex = 0;
+        this.sectionColorPalette = [
+            '#3b82f6', '#ef4444', '#10b981', '#a855f7',
+            '#f59e0b', '#06b6d4', '#ec4899', '#84cc16'
+        ];
+
+        this.ui = {
+            size: document.getElementById('sizeSlider'),
+            rotX: document.getElementById('rotXSlider'),
+            rotY: document.getElementById('rotYSlider'),
+            autoRotateSpeed: document.getElementById('autoRotateSpeedSlider'),
+            edgeThickness: document.getElementById('edgeThicknessSlider'),
+            opacity: document.getElementById('opacitySlider'),
+            color: document.getElementById('sectionColor'),
+            planeA: document.getElementById('planeA'),
+            planeB: document.getElementById('planeB'),
+            planeC: document.getElementById('planeC'),
+            planeD: document.getElementById('planeD'),
+            pointsList: document.getElementById('pointsList'),
+            sectionsList: document.getElementById('sectionsList'),
+            sectionsCount: document.getElementById('sectionsCount'),
+            activePointsCount: document.getElementById('activePointsCount'),
+            builtCount: document.getElementById('builtCount'),
+            sectionInfo: document.getElementById('sectionInfo'),
+            sectionDetails: document.getElementById('sectionDetails')
+        };
+
+        this.ensureAtLeastOneSection();
+        this.init();
+    }
+
+    ensureAtLeastOneSection() {
+        if (this.sections.length === 0) {
+            this.sections.push(this.createEmptySection());
+            this.activeSectionIndex = 0;
+        }
+    }
+
+    createEmptySection() {
+        const idx = this.sections.length;
+        return {
+            id: Date.now() + Math.random(),
+            name: `Сечение ${idx + 1}`,
+            color: this.sectionColorPalette[idx % this.sectionColorPalette.length],
+            opacity: 0.6,
+            points: [],
+            polygon: [],
+            built: false,
+            area: 0,
+            plane: null,
+            planeCoeffs: null,
+            buildSource: 'points'
+        };
+    }
+
+    get activeSection() {
+        return this.sections[this.activeSectionIndex];
+    }
+
+    init() {
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        this.setupInputs();
+        this.setupMouse();
+        this.syncSectionControls();
+        this.updateUI();
+        this.loop();
+    }
+
+    resize() {
+        this.canvas.width = this.container.clientWidth;
+        this.canvas.height = this.container.clientHeight;
+    }
+
+    setupInputs() {
+        document.querySelectorAll('.shape-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                this.setShape(e.target.dataset.shape);
+            });
+        });
+
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                this.pointPlacementMode = e.target.dataset.mode;
+            });
+        });
+
+        this.ui.size.oninput = (e) => {
+            this.size = parseInt(e.target.value, 10);
+            document.getElementById('sizeValue').textContent = this.size;
+            this.setShape(this.shapeType);
+        };
+        this.ui.rotX.oninput = (e) => {
+            this.rotX = parseFloat(e.target.value);
+            document.getElementById('rotXValue').textContent = Math.round(this.rotX);
+        };
+        this.ui.rotY.oninput = (e) => {
+            this.rotY = parseFloat(e.target.value);
+            document.getElementById('rotYValue').textContent = Math.round(this.rotY);
+        };
+        this.ui.edgeThickness.oninput = (e) => {
+            this.edgeThickness = parseFloat(e.target.value);
+            document.getElementById('edgeThicknessValue').textContent = e.target.value;
+        };
+        this.ui.autoRotateSpeed.oninput = (e) => {
+            this.autoRotateSpeed = parseFloat(e.target.value);
+            document.getElementById('autoRotateSpeedValue').textContent = e.target.value;
+        };
+        this.ui.opacity.oninput = (e) => {
+            const val = parseFloat(e.target.value);
+            document.getElementById('opacityValue').textContent = e.target.value;
+            this.activeSection.opacity = val;
+        };
+        this.ui.color.oninput = (e) => {
+            this.activeSection.color = e.target.value;
+            this.updateUI();
+        };
+
+        document.getElementById('newSectionBtn').onclick = () => {
+            this.sections.push(this.createEmptySection());
+            this.activeSectionIndex = this.sections.length - 1;
+            this.syncSectionControls();
+            this.restartAllSpecialModes();
+            this.updateUI();
+        };
+
+        document.getElementById('buildSectionBtn').onclick = () => this.buildActiveSection();
+        document.getElementById('buildEquationBtn').onclick = () => this.buildActiveSectionFromEquation();
+
+        document.getElementById('clearCurrentBtn').onclick = () => this.clearActiveSection();
+
+        document.getElementById('deleteSectionBtn').onclick = () => {
+            if (this.sections.length === 1) {
+                this.sections[0] = this.createEmptySection();
+                this.activeSectionIndex = 0;
+            } else {
+                this.sections.splice(this.activeSectionIndex, 1);
+                this.activeSectionIndex = Math.max(0, this.activeSectionIndex - 1);
+            }
+            this.syncSectionControls();
+            this.restartAllSpecialModes();
+            this.updateUI();
+        };
+
+        document.getElementById('resetViewBtn').onclick = () => {
+            this.rotX = -30;
+            this.rotY = 45;
+            this.ui.rotX.value = -30;
+            this.ui.rotY.value = 45;
+            document.getElementById('rotXValue').textContent = -30;
+            document.getElementById('rotYValue').textContent = 45;
+        };
+
+        document.getElementById('resetZoomBtn').onclick = () => {
+            this.zoom = 1;
+        };
+
+        document.getElementById('toggleWireframeBtn').onclick = () => {
+            this.wireframeOnly = !this.wireframeOnly;
+        };
+
+        document.getElementById('toggleWarmLightBtn').onclick = () => {
+            this.warmLight = !this.warmLight;
+        };
+
+        document.getElementById('toggleLabelsBtn').onclick = () => {
+            this.showLabels = !this.showLabels;
+        };
+
+        document.getElementById('autoRotateBtn').onclick = () => {
+            this.autoRotate = !this.autoRotate;
+            document.getElementById('autoRotateBtn').classList.toggle('active', this.autoRotate);
+        };
+
+        document.getElementById('toggleConstructionStepsBtn').onclick = () => {
+            this.showConstructionSteps = !this.showConstructionSteps;
+            if (this.showConstructionSteps) {
+                this.showTraceMethod = false;
+                this.showAuxiliaryPlaneMethod = false;
+                document.getElementById('toggleTraceMethodBtn').classList.remove('active');
+                document.getElementById('toggleAuxiliaryPlaneBtn').classList.remove('active');
+            }
+            document.getElementById('toggleConstructionStepsBtn').classList.toggle('active', this.showConstructionSteps);
+            this.restartConstructionSteps();
+        };
+
+        document.getElementById('toggleTraceMethodBtn').onclick = () => {
+            this.showTraceMethod = !this.showTraceMethod;
+            if (this.showTraceMethod) {
+                this.showConstructionSteps = false;
+                this.showAuxiliaryPlaneMethod = false;
+                document.getElementById('toggleConstructionStepsBtn').classList.remove('active');
+                document.getElementById('toggleAuxiliaryPlaneBtn').classList.remove('active');
+            }
+            document.getElementById('toggleTraceMethodBtn').classList.toggle('active', this.showTraceMethod);
+            this.restartTraceMethod();
+        };
+
+        document.getElementById('toggleAuxiliaryPlaneBtn').onclick = () => {
+            this.showAuxiliaryPlaneMethod = !this.showAuxiliaryPlaneMethod;
+            if (this.showAuxiliaryPlaneMethod) {
+                this.showConstructionSteps = false;
+                this.showTraceMethod = false;
+                document.getElementById('toggleConstructionStepsBtn').classList.remove('active');
+                document.getElementById('toggleTraceMethodBtn').classList.remove('active');
+            }
+            document.getElementById('toggleAuxiliaryPlaneBtn').classList.toggle('active', this.showAuxiliaryPlaneMethod);
+            this.restartAuxiliaryPlaneMethod();
+        };
+    }
+
+    restartAllSpecialModes() {
+        this.restartConstructionSteps();
+        this.restartTraceMethod();
+        this.restartAuxiliaryPlaneMethod();
+    }
+
+    syncSectionControls() {
+        const s = this.activeSection;
+        this.ui.color.value = s.color;
+        this.ui.opacity.value = s.opacity;
+        document.getElementById('opacityValue').textContent = String(s.opacity);
+        const coeffs = s.planeCoeffs || { A: 1, B: 1, C: 1, D: 0 };
+        this.ui.planeA.value = coeffs.A;
+        this.ui.planeB.value = coeffs.B;
+        this.ui.planeC.value = coeffs.C;
+        this.ui.planeD.value = coeffs.D;
+    }
+
+    setShape(type) {
+        this.shapeType = type;
+        switch(type) {
+            case 'cube': this.shape = new Cube(this.size); break;
+            case 'pyramid': this.shape = new Pyramid(this.size); break;
+            case 'hexagonalPyramid': this.shape = new HexagonalPyramid(this.size); break;
+            case 'prism': this.shape = new Prism(this.size); break;
+            case 'tetrahedron': this.shape = new Tetrahedron(this.size); break;
+            case 'cylinder': this.shape = new Cylinder(this.size, 28); break;
+            case 'cone': this.shape = new Cone(this.size, 28); break;
+            case 'sphere': this.shape = new Sphere(this.size, 12, 20); break;
+        }
+        this.sections = [this.createEmptySection()];
+        this.activeSectionIndex = 0;
+        this.draggingPointIdx = -1;
+        this.hoveredPointIdx = -1;
+        this.hoveredFaceIdx = -1;
+        this.hoveredEdgeIdx = -1;
+        this.restartAllSpecialModes();
+        this.syncSectionControls();
+        this.updateUI();
+    }
+
+    getRotatedVertices() {
+        return this.shape.rotate(this.rotX, this.rotY);
+    }
+
+    inverseRotatePoint(p) {
+        return p.rotateY(-this.rotY).rotateX(-this.rotX);
+    }
+
+    getRayFromScreen(x, y) {
+        const sx = (x - this.canvas.width / 2) / this.zoom;
+        const sy = -(y - this.canvas.height / 2) / this.zoom;
+        const origin = new Point3D(0, 0, -this.cameraDistance);
+        const dir = new Point3D(sx, sy, this.cameraDistance).normalize();
+        return { origin, dir };
+    }
+
+    intersectRayPlane(origin, dir, planePoint, planeNormal) {
+        const denom = planeNormal.dot(dir);
+        if (Math.abs(denom) < 1e-9) return null;
+        const t = planeNormal.dot(planePoint.sub(origin)) / denom;
+        if (t < 0) return null;
+        return origin.add(dir.scale(t));
+    }
+
+    pointInPolygon2D(x, y, poly) {
+        let inside = false;
+        for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+            const xi = poly[i].x, yi = poly[i].y;
+            const xj = poly[j].x, yj = poly[j].y;
+            const intersect = ((yi > y) !== (yj > y)) &&
+                (x < (xj - xi) * (y - yi) / ((yj - yi) || 1e-9) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    }
+
+    pointInFace3D(point, faceIndices, rotatedVertices) {
+        const p0 = rotatedVertices[faceIndices[0]];
+        const p1 = rotatedVertices[faceIndices[1]];
+        const p2 = rotatedVertices[faceIndices[2]];
+        const normal = p1.sub(p0).cross(p2.sub(p0)).normalize();
+        const helper = Math.abs(normal.x) < 0.9 ? new Point3D(1, 0, 0) : new Point3D(0, 1, 0);
+        const u = normal.cross(helper).normalize();
+        const v = normal.cross(u).normalize();
+        const poly2d = faceIndices.map(idx => {
+            const d = rotatedVertices[idx].sub(p0);
+            return { x: d.dot(u), y: d.dot(v) };
+        });
+        const dp = point.sub(p0);
+        return this.pointInPolygon2D(dp.dot(u), dp.dot(v), poly2d);
+    }
+
+    computeFaceVisibility(rotated) {
+        let shapeCenter = new Point3D(0, 0, 0);
+        for (const v of rotated) shapeCenter = shapeCenter.add(v);
+        shapeCenter = shapeCenter.scale(1 / rotated.length);
+        const cameraPos = new Point3D(0, 0, -this.cameraDistance);
+        return this.shape.faces.map(face => {
+            const v0 = rotated[face[0]];
+            const v1 = rotated[face[1]];
+            const v2 = rotated[face[2]];
+            const a = v1.sub(v0);
+            const b = v2.sub(v0);
+            let n = a.cross(b);
+            let center = new Point3D(0, 0, 0);
+            for (const idx of face) center = center.add(rotated[idx]);
+            center = center.scale(1 / face.length);
+            const fromShapeCenter = center.sub(shapeCenter);
+            if (n.dot(fromShapeCenter) < 0) n = n.scale(-1);
+            const toCamera = cameraPos.sub(center);
+            return n.dot(toCamera) > 0;
+        });
+    }
+
+    findFaceUnderCursor(x, y) {
+        const rotated = this.getRotatedVertices();
+        const faceVisible = this.computeFaceVisibility(rotated);
+        const ray = this.getRayFromScreen(x, y);
+        let best = null;
+        for (let fIdx = 0; fIdx < this.shape.faces.length; fIdx++) {
+            if (!faceVisible[fIdx]) continue;
+            const face = this.shape.faces[fIdx];
+            const projFace = face.map(idx =>
+                rotated[idx].project(this.canvas.width, this.canvas.height, this.cameraDistance, this.zoom)
+            );
+            if (!this.pointInPolygon2D(x, y, projFace)) continue;
+            const p0 = rotated[face[0]];
+            const p1 = rotated[face[1]];
+            const p2 = rotated[face[2]];
+            const normal = p1.sub(p0).cross(p2.sub(p0)).normalize();
+            const hit = this.intersectRayPlane(ray.origin, ray.dir, p0, normal);
+            if (!hit) continue;
+            if (!this.pointInFace3D(hit, face, rotated)) continue;
+            const dist = hit.sub(ray.origin).length();
+            if (!best || dist < best.dist) best = { faceIdx: fIdx, pointRotated: hit, dist };
+        }
+        return best;
+    }
+
+    setupMouse() {
+        const startDrag = (x, y) => {
+            this.mouseDown = true;
+            this.isDragging = false;
+            this.lastX = x;
+            this.lastY = y;
+            this.updateHoverState(x, y);
+            this.draggingPointIdx = this.hoveredPointIdx !== -1 ? this.hoveredPointIdx : -1;
+        };
+
+        const moveDrag = (x, y) => {
+            if (this.draggingPointIdx !== -1) {
+                const p = this.activeSection.points[this.draggingPointIdx];
+                if (p?.hostType === 'edge') this.movePointAlongEdge(this.draggingPointIdx, x, y);
+                else if (p?.hostType === 'face') this.movePointOnFace(this.draggingPointIdx, x, y);
+                return;
+            }
+            if (this.mouseDown) {
+                const dx = x - this.lastX;
+                const dy = y - this.lastY;
+                if (Math.abs(dx) > 2 || Math.abs(dy) > 2) this.isDragging = true;
+                if (this.isDragging) {
+                    this.rotY += dx * 0.5;
+                    this.rotX -= dy * 0.5;
+                    this.ui.rotX.value = this.rotX;
+                    this.ui.rotY.value = this.rotY;
+                    document.getElementById('rotXValue').textContent = Math.round(this.rotX);
+                    document.getElementById('rotYValue').textContent = Math.round(this.rotY);
+                    this.lastX = x;
+                    this.lastY = y;
+                }
+            }
+            this.updateHoverState(x, y);
+        };
+
+        const endDrag = (x, y) => {
+            if (this.draggingPointIdx !== -1) {
+                this.draggingPointIdx = -1;
+                this.updateHoverState(x, y);
+                this.mouseDown = false;
+                this.isDragging = false;
+                return;
+            }
+            if (!this.isDragging) this.handleClick(x, y);
+            this.mouseDown = false;
+            this.isDragging = false;
+        };
+
+        this.canvas.onmousedown = e => startDrag(e.offsetX, e.offsetY);
+        this.canvas.onmousemove = e => moveDrag(e.offsetX, e.offsetY);
+        this.canvas.onmouseup = e => endDrag(e.offsetX, e.offsetY);
+
+        this.canvas.onmouseleave = () => {
+            this.hoveredEdgeIdx = -1;
+            this.hoveredFaceIdx = -1;
+            this.hoveredPointIdx = -1;
+            this.draggingPointIdx = -1;
+            this.mouseDown = false;
+            this.isDragging = false;
+            this.canvas.style.cursor = 'crosshair';
+        };
+
+        this.canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomFactor = Math.exp(-e.deltaY * 0.0015);
+            this.zoom *= zoomFactor;
+            this.zoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.zoom));
+        }, { passive: false });
+
+        this.canvas.ontouchstart = e => {
+            e.preventDefault();
+            const rect = this.canvas.getBoundingClientRect();
+            if (e.touches.length === 1) {
+                const t = e.touches[0];
+                startDrag(t.clientX - rect.left, t.clientY - rect.top);
+            }
+            if (e.touches.length === 2) {
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                this.lastTouchDistance = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+            }
+        };
+
+        this.canvas.ontouchmove = e => {
+            e.preventDefault();
+            const rect = this.canvas.getBoundingClientRect();
+            if (e.touches.length === 1) {
+                const t = e.touches[0];
+                moveDrag(t.clientX - rect.left, t.clientY - rect.top);
+            }
+            if (e.touches.length === 2) {
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+                if (this.lastTouchDistance !== null) {
+                    const factor = dist / this.lastTouchDistance;
+                    this.zoom *= factor;
+                    this.zoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.zoom));
+                }
+                this.lastTouchDistance = dist;
+            }
+        };
+
+        this.canvas.ontouchend = e => {
+            e.preventDefault();
+            if (e.touches.length < 2) this.lastTouchDistance = null;
+            if (e.changedTouches.length === 1) {
+                const t = e.changedTouches[0];
+                const rect = this.canvas.getBoundingClientRect();
+                endDrag(t.clientX - rect.left, t.clientY - rect.top);
+            }
+            this.mouseDown = false;
+            this.isDragging = false;
+        };
+    }
+
+    rebuildActiveSectionIfNeeded() {
+        const s = this.activeSection;
+        if (s.built && s.points.length >= 3 && s.buildSource === 'points') this.buildSectionFor(s, false);
+    }
+
+    buildSectionFor(section, showAlert = true) {
+        if (section.points.length < 3) {
+            if (showAlert) alert('Нужно минимум 3 точки.');
+            return false;
+        }
+        const a = section.points[0];
+        const b = section.points[1];
+        const c = section.points[2];
+        const plane = planeFrom3Points(a, b, c);
+        if (!plane) {
+            section.built = false;
+            section.polygon = [];
+            section.area = 0;
+            section.plane = null;
+            section.planeCoeffs = null;
+            if (showAlert) alert('Первые 3 точки лежат почти на одной прямой. Выберите другие точки.');
+            return false;
+        }
+        const polygon = buildSectionPolygon(this.shape, plane);
+        if (polygon.length < 3) {
+            section.built = false;
+            section.polygon = [];
+            section.area = 0;
+            section.plane = plane;
+            section.planeCoeffs = planeToIntegerCoefficients(plane);
+            if (showAlert) alert('Не удалось построить корректное сечение для выбранных точек.');
+            return false;
+        }
+        section.polygon = polygon;
+        section.area = polygonArea3D(polygon);
+        section.built = true;
+        section.plane = plane;
+        section.planeCoeffs = planeToIntegerCoefficients(plane);
+        section.buildSource = 'points';
+        return true;
+    }
+
+    buildActiveSection() {
+        this.buildSectionFor(this.activeSection, true);
+        this.syncSectionControls();
+        this.restartAllSpecialModes();
+        this.updateUI();
+    }
+
+    buildActiveSectionFromEquation() {
+        const A = parseInt(this.ui.planeA.value, 10) || 0;
+        const B = parseInt(this.ui.planeB.value, 10) || 0;
+        const C = parseInt(this.ui.planeC.value, 10) || 0;
+        const D = parseInt(this.ui.planeD.value, 10) || 0;
+        if (A === 0 && B === 0 && C === 0) {
+            alert('Хотя бы один из коэффициентов A, B, C должен быть ненулевым.');
+            return;
+        }
+        const plane = planeFromIntegerCoefficients(A, B, C, D);
+        const polygon = buildSectionPolygon(this.shape, plane);
+        if (polygon.length < 3) {
+            alert('Эта плоскость не даёт корректного сечения для выбранной фигуры.');
+            return;
+        }
+        const s = this.activeSection;
+        const g = gcdArray([A, B, C, D]);
+        let coeffs = { A: A / g, B: B / g, C: C / g, D: D / g };
+        const firstNonZero = [coeffs.A, coeffs.B, coeffs.C, coeffs.D].find(v => v !== 0) || 1;
+        if (firstNonZero < 0) {
+            coeffs = { A: -coeffs.A, B: -coeffs.B, C: -coeffs.C, D: -coeffs.D };
+        }
+        s.points = [];
+        s.plane = plane;
+        s.planeCoeffs = coeffs;
+        s.polygon = polygon;
+        s.area = polygonArea3D(polygon);
+        s.built = true;
+        s.buildSource = 'equation';
+        this.syncSectionControls();
+        this.restartAllSpecialModes();
+        this.updateUI();
+    }
+
+    clearActiveSection() {
+        const fresh = this.createEmptySection();
+        const current = this.activeSection;
+        current.points = fresh.points;
+        current.polygon = fresh.polygon;
+        current.built = fresh.built;
+        current.area = fresh.area;
+        current.plane = fresh.plane;
+        current.planeCoeffs = fresh.planeCoeffs;
+        current.buildSource = fresh.buildSource;
+        this.draggingPointIdx = -1;
+        this.hoveredPointIdx = -1;
+        this.restartAllSpecialModes();
+        this.syncSectionControls();
+        this.updateUI();
+    }
+
+    updateHoverState(x, y) {
+        this.hoveredPointIdx = this.findPointNearScreen(x, y);
+        this.hoveredEdgeIdx = -1;
+        this.hoveredFaceIdx = -1;
+        if (this.hoveredPointIdx === -1) {
+            if (this.pointPlacementMode === 'edge') this.checkHoverEdge(x, y);
+            else {
+                const hit = this.findFaceUnderCursor(x, y);
+                this.hoveredFaceIdx = hit ? hit.faceIdx : -1;
+            }
+        }
+        if (this.draggingPointIdx !== -1 || this.hoveredPointIdx !== -1) this.canvas.style.cursor = 'grab';
+        else if (this.hoveredEdgeIdx !== -1 || this.hoveredFaceIdx !== -1) this.canvas.style.cursor = 'pointer';
+        else this.canvas.style.cursor = 'crosshair';
+    }
+
+    findPointNearScreen(x, y) {
+        const pts = this.activeSection.points;
+        for (let i = pts.length - 1; i >= 0; i--) {
+            const pt = pts[i];
+            const proj = pt.rotate(this.rotX, this.rotY).project(
+                this.canvas.width, this.canvas.height, this.cameraDistance, this.zoom
+            );
+            const dx = x - proj.x;
+            const dy = y - proj.y;
+            if (Math.sqrt(dx * dx + dy * dy) <= 9) return i;
+        }
+        return -1;
+    }
+
+    checkHoverEdge(x, y) {
+        const rotated = this.getRotatedVertices();
+        let found = -1;
+        for (const edge of this.shape.edges) {
+            const rv1 = rotated[edge.v1Index];
+            const rv2 = rotated[edge.v2Index];
+            const proj1 = rv1.project(this.canvas.width, this.canvas.height, this.cameraDistance, this.zoom);
+            const proj2 = rv2.project(this.canvas.width, this.canvas.height, this.cameraDistance, this.zoom);
+            if (edge.isHovered(x, y, proj1, proj2, 12)) {
+                found = edge.idx;
+                break;
+            }
+        }
+        this.hoveredEdgeIdx = found;
+    }
+
+    movePointAlongEdge(pointIndex, x, y) {
+        const pts = this.activeSection.points;
+        const pt = pts[pointIndex];
+        if (!pt) return;
+        const edge = this.shape.edges[pt.edgeIdx];
+        if (!edge) return;
+        const rotated = this.getRotatedVertices();
+        const rv1 = rotated[edge.v1Index];
+        const rv2 = rotated[edge.v2Index];
+        const proj1 = rv1.project(this.canvas.width, this.canvas.height, this.cameraDistance, this.zoom);
+        const proj2 = rv2.project(this.canvas.width, this.canvas.height, this.cameraDistance, this.zoom);
+        let param = edge.projectParamFromScreen(x, y, proj1, proj2);
+        param = Math.max(0, Math.min(1, param));
+        const moved = edge.getPointAt(param);
+        pt.x = moved.x;
+        pt.y = moved.y;
+        pt.z = moved.z;
+        pt.param = param;
+        this.rebuildActiveSectionIfNeeded();
+        this.restartAllSpecialModes();
+        this.updateUI();
+    }
+
+    movePointOnFace(pointIndex, x, y) {
+        const pts = this.activeSection.points;
+        const pt = pts[pointIndex];
+        if (!pt || pt.faceIdx == null) return;
+        const hit = this.findFaceUnderCursor(x, y);
+        if (!hit || hit.faceIdx !== pt.faceIdx) return;
+        const unrotated = this.inverseRotatePoint(hit.pointRotated);
+        pt.x = unrotated.x;
+        pt.y = unrotated.y;
+        pt.z = unrotated.z;
+        this.rebuildActiveSectionIfNeeded();
+        this.restartAllSpecialModes();
+        this.updateUI();
+    }
+
+    handleClick(x, y) {
+        const s = this.activeSection;
+        if (this.pointPlacementMode === 'edge') {
+            if (this.hoveredEdgeIdx === -1) return;
+            const edge = this.shape.edges[this.hoveredEdgeIdx];
+            const rotated = this.getRotatedVertices();
+            const rv1 = rotated[edge.v1Index];
+            const rv2 = rotated[edge.v2Index];
+            const proj1 = rv1.project(this.canvas.width, this.canvas.height, this.cameraDistance, this.zoom);
+            const proj2 = rv2.project(this.canvas.width, this.canvas.height, this.cameraDistance, this.zoom);
+            let param = edge.projectParamFromScreen(x, y, proj1, proj2);
+            param = Math.max(0, Math.min(1, param));
+            const newPoint = edge.getPointAt(param);
+            s.points.push(newPoint);
+            s.buildSource = 'points';
+            this.showFeedback(x, y);
+            this.updateUI();
+            return;
+        }
+        if (this.pointPlacementMode === 'face') {
+            const hit = this.findFaceUnderCursor(x, y);
+            if (!hit) return;
+            const p = this.inverseRotatePoint(hit.pointRotated);
+            p.hostType = 'face';
+            p.faceIdx = hit.faceIdx;
+            s.points.push(p);
+            s.buildSource = 'points';
+            this.showFeedback(x, y);
+            this.updateUI();
+        }
+    }
+
+    showFeedback(x, y) {
+        const el = document.createElement('div');
+        el.className = 'click-feedback';
+        el.textContent = '+ Точка';
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+        this.container.appendChild(el);
+        setTimeout(() => el.remove(), 800);
+    }
+
+    removePoint(index) {
+        const s = this.activeSection;
+        if (!s.points[index]) return;
+        s.points.splice(index, 1);
+        if (this.draggingPointIdx === index) this.draggingPointIdx = -1;
+        if (this.hoveredPointIdx === index) this.hoveredPointIdx = -1;
+        s.buildSource = 'points';
+        if (s.points.length < 3) {
+            s.polygon = [];
+            s.built = false;
+            s.area = 0;
+            s.plane = null;
+            s.planeCoeffs = null;
+        } else {
+            this.rebuildActiveSectionIfNeeded();
+        }
+        this.restartAllSpecialModes();
+        this.updateUI();
+    }
+
+    isPointVisible(point3D, rotated, faceVisible) {
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const pProj = point3D.rotate(this.rotX, this.rotY).project(w, h, this.cameraDistance, this.zoom);
+        for (let fIdx = 0; fIdx < this.shape.faces.length; fIdx++) {
+            if (!faceVisible[fIdx]) continue;
+            const face = this.shape.faces[fIdx];
+            const projFace = face.map(idx => rotated[idx].project(w, h, this.cameraDistance, this.zoom));
+            if (!this.pointInPolygon2D(pProj.x, pProj.y, projFace)) continue;
+            let avgZ = 0;
+            for (const idx of face) avgZ += rotated[idx].z;
+            avgZ /= face.length;
+            if (avgZ < pProj.z - 1e-6) return false;
+        }
+        return true;
+    }
+
+    getVertexName(index) {
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        if (index < letters.length) return letters[index];
+        return 'V' + (index + 1);
+    }
+
+    getSectionPointName(index) {
+        const letters = 'PQRSTUVWXYZ';
+        if (index < letters.length) return letters[index];
+        return 'S' + (index + 1);
+    }
+
+    drawLabel(text, x, y, color = '#ffffff', bg = 'rgba(15, 23, 42, 0.85)') {
+        this.ctx.save();
+        this.ctx.font = 'bold 14px Segoe UI, Arial, sans-serif';
+        const paddingX = 6;
+        const width = this.ctx.measureText(text).width + paddingX * 2;
+        const height = 20;
+        const rx = x, ry = y - height + 4, r = 6;
+        this.ctx.fillStyle = bg;
+        this.ctx.beginPath();
+        this.ctx.moveTo(rx + r, ry);
+        this.ctx.lineTo(rx + width - r, ry);
+        this.ctx.quadraticCurveTo(rx + width, ry, rx + width, ry + r);
+        this.ctx.lineTo(rx + width, ry + height - r);
+        this.ctx.quadraticCurveTo(rx + width, ry + height, rx + width - r, ry + height);
+        this.ctx.lineTo(rx + r, ry + height);
+        this.ctx.quadraticCurveTo(rx, ry + height, rx, ry + height - r);
+        this.ctx.lineTo(rx, ry + r);
+        this.ctx.quadraticCurveTo(rx, ry, rx + r, ry);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.fillStyle = color;
+        this.ctx.fillText(text, x + paddingX, y);
+        this.ctx.restore();
+    }
+
+    restartConstructionSteps() {
+        this.constructionStepIndex = 0;
+        this.constructionStepElapsed = 0;
+    }
+
+    getConstructionSteps(section) {
+        if (!section || !section.built || !section.polygon || section.polygon.length < 3) return [];
+        const steps = [];
+        const pts = section.polygon;
+        steps.push({ type: 'point', pointIndex: 0 });
+        for (let i = 1; i < pts.length; i++) {
+            steps.push({ type: 'point', pointIndex: i });
+            steps.push({ type: 'segment', fromIndex: i - 1, toIndex: i });
+        }
+        steps.push({ type: 'segment', fromIndex: pts.length - 1, toIndex: 0 });
+        return steps;
+    }
+
+    advanceConstructionSteps(dt) {
+        if (!this.showConstructionSteps) return;
+        const section = this.activeSection;
+        const steps = this.getConstructionSteps(section);
+        if (steps.length === 0) return;
+        if (this.constructionStepIndex >= steps.length - 1) return;
+        this.constructionStepElapsed += dt;
+        if (this.constructionStepElapsed >= this.constructionStepDuration) {
+            this.constructionStepElapsed = 0;
+            this.constructionStepIndex = Math.min(this.constructionStepIndex + 1, steps.length - 1);
+        }
+    }
+
+    drawAnimatedSegment(a, b, progress, color, lineWidth) {
+        const x = a.x + (b.x - a.x) * progress;
+        const y = a.y + (b.y - a.y) * progress;
+        this.ctx.beginPath();
+        this.ctx.moveTo(a.x, a.y);
+        this.ctx.lineTo(x, y);
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = lineWidth;
+        this.ctx.setLineDash([]);
+        this.ctx.stroke();
+    }
+
+    drawConstructionSteps(section) {
+        if (!section || !section.built || section.polygon.length < 3) return;
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const color = section.color;
+        const pts2d = section.polygon.map(
+            p => p.rotate(this.rotX, this.rotY).project(w, h, this.cameraDistance, this.zoom)
+        );
+        const steps = this.getConstructionSteps(section);
+        if (steps.length === 0) return;
+        const finishedStepCount = Math.min(this.constructionStepIndex, steps.length - 1);
+        const currentStep = steps[Math.min(this.constructionStepIndex, steps.length - 1)];
+        const progress = Math.min(1, this.constructionStepElapsed / this.constructionStepDuration);
+
+        for (let i = 0; i < finishedStepCount; i++) {
+            const step = steps[i];
+            if (step.type === 'point') {
+                const p = pts2d[step.pointIndex];
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.fill();
+                this.ctx.strokeStyle = color;
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+                this.drawLabel(String(step.pointIndex + 1), p.x + 8, p.y - 8, '#ffffff', 'rgba(37, 99, 235, 0.95)');
+            }
+            if (step.type === 'segment') {
+                const a = pts2d[step.fromIndex];
+                const b = pts2d[step.toIndex];
+                this.ctx.beginPath();
+                this.ctx.moveTo(a.x, a.y);
+                this.ctx.lineTo(b.x, b.y);
+                this.ctx.strokeStyle = color;
+                this.ctx.lineWidth = 3;
+                this.ctx.stroke();
+            }
+        }
+
+        if (currentStep) {
+            if (currentStep.type === 'point') {
+                const p = pts2d[currentStep.pointIndex];
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, 7 * Math.max(0.5, progress), 0, Math.PI * 2);
+                this.ctx.fillStyle = `rgba(255,255,255,${0.35 + 0.65 * progress})`;
+                this.ctx.fill();
+
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.fill();
+                this.ctx.strokeStyle = color;
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+
+                this.drawLabel(String(currentStep.pointIndex + 1), p.x + 8, p.y - 8, '#ffffff', 'rgba(37, 99, 235, 0.95)');
+            }
+
+            if (currentStep.type === 'segment') {
+                const a = pts2d[currentStep.fromIndex];
+                const b = pts2d[currentStep.toIndex];
+                this.drawAnimatedSegment(a, b, progress, color, 3);
+                [currentStep.fromIndex, currentStep.toIndex].forEach(idx => {
+                    const p = pts2d[idx];
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+                    this.ctx.fillStyle = '#ffffff';
+                    this.ctx.fill();
+                    this.ctx.strokeStyle = color;
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+                });
+            }
+        }
+
+        if (this.constructionStepIndex >= steps.length - 1) {
+            const r = parseInt(color.substr(1, 2), 16);
+            const g = parseInt(color.substr(3, 2), 16);
+            const b = parseInt(color.substr(5, 2), 16);
+            this.ctx.beginPath();
+            this.ctx.moveTo(pts2d[0].x, pts2d[0].y);
+            for (let i = 1; i < pts2d.length; i++) this.ctx.lineTo(pts2d[i].x, pts2d[i].y);
+            this.ctx.closePath();
+            this.ctx.fillStyle = `rgba(${r},${g},${b},${section.opacity * 0.45})`;
+            this.ctx.fill();
+        }
+    }
+
+    isPolyhedronShape() {
+        return ['cube', 'pyramid', 'hexagonalPyramid', 'prism', 'tetrahedron'].includes(this.shapeType);
+    }
+
+    restartTraceMethod() {
+        this.traceStepIndex = 0;
+        this.traceStepElapsed = 0;
+    }
+
+    getFacePlane(faceIndices) {
+        const a = this.shape.vertices[faceIndices[0]];
+        const b = this.shape.vertices[faceIndices[1]];
+        const c = this.shape.vertices[faceIndices[2]];
+        return planeFrom3Points(a, b, c);
+    }
+
+    getFaceEdges(faceIndices) {
+        const result = [];
+        for (let i = 0; i < faceIndices.length; i++) {
+            const a = faceIndices[i];
+            const b = faceIndices[(i + 1) % faceIndices.length];
+            const edge = this.shape.edges.find(e =>
+                (e.v1Index === a && e.v2Index === b) ||
+                (e.v1Index === b && e.v2Index === a)
+            );
+            if (edge) result.push(edge);
+        }
+        return result;
+    }
+
+    getPlaneTraceOnFace(faceIndices, sectionPlane) {
+        const facePlane = this.getFacePlane(faceIndices);
+        if (!facePlane) return null;
+        return lineFromTwoPlanes(facePlane, sectionPlane);
+    }
+
+    getTraceMethodSteps(section) {
+        if (!section || !section.built || !section.plane || section.polygon.length < 3) return [];
+        if (!this.isPolyhedronShape()) return [];
+        const plane = section.plane;
+        const steps = [];
+
+        this.shape.faces.forEach((face, faceIdx) => {
+            const faceEdges = this.getFaceEdges(face);
+            const intersectionPoints = [];
+            for (const edge of faceEdges) {
+                const pts = intersectSegmentPlane(edge.v1, edge.v2, plane);
+                for (const p of pts) {
+                    const exists = intersectionPoints.some(q => samePoint(q.point, p, 1e-4));
+                    if (!exists) intersectionPoints.push({ point: p, edgeIdx: edge.idx });
+                }
+            }
+
+            const unique = [];
+            for (const item of intersectionPoints) {
+                if (!unique.some(q => samePoint(q.point, item.point, 1e-4))) unique.push(item);
+            }
+
+            if (unique.length !== 2) return;
+
+            const traceLine = this.getPlaneTraceOnFace(face, plane);
+            if (!traceLine) return;
+
+            steps.push({
+                type: 'faceTrace',
+                faceIdx,
+                face,
+                traceLine,
+                intersections: unique
+            });
+
+            steps.push({
+                type: 'faceSegment',
+                faceIdx,
+                face,
+                p1: unique[0].point,
+                p2: unique[1].point
+            });
+        });
+
+        return steps;
+    }
+
+    advanceTraceMethod(dt) {
+        if (!this.showTraceMethod) return;
+        const steps = this.getTraceMethodSteps(this.activeSection);
+        if (steps.length === 0) return;
+        if (this.traceStepIndex >= steps.length - 1) return;
+        this.traceStepElapsed += dt;
+        if (this.traceStepElapsed >= this.traceStepDuration) {
+            this.traceStepElapsed = 0;
+            this.traceStepIndex = Math.min(this.traceStepIndex + 1, steps.length - 1);
+        }
+    }
+
+    drawInfiniteTraceLineOnFace(faceIndices, traceLine, color = '#f59e0b') {
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const faceVerts = faceIndices.map(idx => this.shape.vertices[idx]);
+        const center = polygonCenter(faceVerts);
+        let radius = 0;
+        for (const v of faceVerts) radius = Math.max(radius, v.distanceTo(center));
+        radius *= 1.8;
+
+        const a3 = traceLine.point.add(traceLine.dir.scale(-radius));
+        const b3 = traceLine.point.add(traceLine.dir.scale(radius));
+
+        const a2 = a3.rotate(this.rotX, this.rotY).project(w, h, this.cameraDistance, this.zoom);
+        const b2 = b3.rotate(this.rotX, this.rotY).project(w, h, this.cameraDistance, this.zoom);
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(a2.x, a2.y);
+        this.ctx.lineTo(b2.x, b2.y);
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = 2.2;
+        this.ctx.setLineDash([8, 6]);
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
+    }
+
+    drawTraceMethodOverlay(section, rotated) {
+        if (!section || !section.built || !section.plane) return;
+        if (!this.isPolyhedronShape()) return;
+        const steps = this.getTraceMethodSteps(section);
+        if (steps.length === 0) return;
+
+        const maxStep = Math.min(this.traceStepIndex, steps.length - 1);
+        const currentProgress = Math.min(1, this.traceStepElapsed / this.traceStepDuration);
+
+        for (let i = 0; i < maxStep; i++) {
+            const step = steps[i];
+            if (step.type === 'faceTrace') {
+                const proj = step.face.map(idx => rotated[idx].project(this.canvas.width, this.canvas.height, this.cameraDistance, this.zoom));
+                this.ctx.beginPath();
+                this.ctx.moveTo(proj[0].x, proj[0].y);
+                for (let k = 1; k < proj.length; k++) this.ctx.lineTo(proj[k].x, proj[k].y);
+                this.ctx.closePath();
+                this.ctx.fillStyle = 'rgba(245, 158, 11, 0.10)';
+                this.ctx.fill();
+
+                this.drawInfiniteTraceLineOnFace(step.face, step.traceLine, '#f59e0b');
+
+                for (const item of step.intersections) {
+                    const p = item.point.rotate(this.rotX, this.rotY).project(this.canvas.width, this.canvas.height, this.cameraDistance, this.zoom);
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+                    this.ctx.fillStyle = '#f59e0b';
+                    this.ctx.fill();
+                    this.ctx.strokeStyle = '#fff';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+                }
+            }
+
+            if (step.type === 'faceSegment') {
+                const a = step.p1.rotate(this.rotX, this.rotY).project(this.canvas.width, this.canvas.height, this.cameraDistance, this.zoom);
+                const b = step.p2.rotate(this.rotX, this.rotY).project(this.canvas.width, this.canvas.height, this.cameraDistance, this.zoom);
+                this.ctx.beginPath();
+                this.ctx.moveTo(a.x, a.y);
+                this.ctx.lineTo(b.x, b.y);
+                this.ctx.strokeStyle = section.color;
+                this.ctx.lineWidth = 3;
+                this.ctx.stroke();
+            }
+        }
+
+        const step = steps[maxStep];
+        if (!step) return;
+
+        if (step.type === 'faceTrace') {
+            const proj = step.face.map(idx => rotated[idx].project(this.canvas.width, this.canvas.height, this.cameraDistance, this.zoom));
+            this.ctx.beginPath();
+            this.ctx.moveTo(proj[0].x, proj[0].y);
+            for (let k = 1; k < proj.length; k++) this.ctx.lineTo(proj[k].x, proj[k].y);
+            this.ctx.closePath();
+            this.ctx.fillStyle = `rgba(245, 158, 11, ${0.05 + 0.12 * currentProgress})`;
+            this.ctx.fill();
+            this.drawInfiniteTraceLineOnFace(step.face, step.traceLine, '#f59e0b');
+
+            for (const item of step.intersections) {
+                const p = item.point.rotate(this.rotX, this.rotY).project(this.canvas.width, this.canvas.height, this.cameraDistance, this.zoom);
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, 7 * Math.max(0.5, currentProgress), 0, Math.PI * 2);
+                this.ctx.fillStyle = `rgba(245,158,11,${0.3 + 0.7 * currentProgress})`;
+                this.ctx.fill();
+
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+                this.ctx.fillStyle = '#f59e0b';
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#fff';
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+            }
+        }
+
+        if (step.type === 'faceSegment') {
+            const a = step.p1.rotate(this.rotX, this.rotY).project(this.canvas.width, this.canvas.height, this.cameraDistance, this.zoom);
+            const b = step.p2.rotate(this.rotX, this.rotY).project(this.canvas.width, this.canvas.height, this.cameraDistance, this.zoom);
+            this.drawAnimatedSegment(a, b, currentProgress, section.color, 3.2);
+
+            [step.p1, step.p2].forEach(p3 => {
+                const p = p3.rotate(this.rotX, this.rotY).project(this.canvas.width, this.canvas.height, this.cameraDistance, this.zoom);
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.fill();
+                this.ctx.strokeStyle = section.color;
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+            });
+        }
+
+        if (this.traceStepIndex >= steps.length - 1) {
+            const color = section.color;
+            const r = parseInt(color.substr(1, 2), 16);
+            const g = parseInt(color.substr(3, 2), 16);
+            const b = parseInt(color.substr(5, 2), 16);
+            const projPoints = section.polygon.map(
+                p => p.rotate(this.rotX, this.rotY).project(this.canvas.width, this.canvas.height, this.cameraDistance, this.zoom)
+            );
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(projPoints[0].x, projPoints[0].y);
+            for (let i = 1; i < projPoints.length; i++) this.ctx.lineTo(projPoints[i].x, projPoints[i].y);
+            this.ctx.closePath();
+            this.ctx.fillStyle = `rgba(${r},${g},${b},${section.opacity * 0.35})`;
+            this.ctx.fill();
+        }
+    }
+
+    restartAuxiliaryPlaneMethod() {
+        this.auxStepIndex = 0;
+        this.auxStepElapsed = 0;
+    }
+
+    formatAuxiliaryPlane(aux) {
+        const value = Math.abs(aux.value) < 1e-6 ? 0 : aux.value;
+        const rounded = Math.round(value * 100) / 100;
+        return `${aux.axis} = ${rounded}`;
+    }
+
+    drawOverlayCaption(title, subtitle = '') {
+        const x = 18;
+        const y = 22;
+        const paddingX = 10;
+        const lineH = 20;
+
+        this.ctx.save();
+        this.ctx.font = 'bold 15px Segoe UI, Arial, sans-serif';
+
+        const w1 = this.ctx.measureText(title).width;
+        this.ctx.font = '13px Segoe UI, Arial, sans-serif';
+        const w2 = subtitle ? this.ctx.measureText(subtitle).width : 0;
+
+        const width = Math.max(w1, w2) + paddingX * 2;
+        const height = subtitle ? 44 : 28;
+
+        this.ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+        this.ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        this.ctx.roundRect(x, y, width, height, 10);
+        this.ctx.fill();
+        this.ctx.stroke();
+
+        this.ctx.font = 'bold 15px Segoe UI, Arial, sans-serif';
+        this.ctx.fillStyle = '#f8fafc';
+        this.ctx.fillText(title, x + paddingX, y + 18);
+
+        if (subtitle) {
+            this.ctx.font = '13px Segoe UI, Arial, sans-serif';
+            this.ctx.fillStyle = '#93c5fd';
+            this.ctx.fillText(subtitle, x + paddingX, y + 18 + lineH);
+        }
+
+        this.ctx.restore();
+    }
+
+    getAuxiliaryPlanes(section) {
+        if (!section || !section.built || !section.plane || section.polygon.length < 3) return [];
+        if (!this.isPolyhedronShape()) return [];
+
+        const bbox = {
+            minX: Infinity, maxX: -Infinity,
+            minY: Infinity, maxY: -Infinity,
+            minZ: Infinity, maxZ: -Infinity
+        };
+
+        for (const v of this.shape.vertices) {
+            bbox.minX = Math.min(bbox.minX, v.x);
+            bbox.maxX = Math.max(bbox.maxX, v.x);
+            bbox.minY = Math.min(bbox.minY, v.y);
+            bbox.maxY = Math.max(bbox.maxY, v.y);
+            bbox.minZ = Math.min(bbox.minZ, v.z);
+            bbox.maxZ = Math.max(bbox.maxZ, v.z);
+        }
+
+        const candidateDefs = [];
+
+        for (const p of section.polygon) {
+            candidateDefs.push({ axis: 'x', value: p.x });
+            candidateDefs.push({ axis: 'y', value: p.y });
+            candidateDefs.push({ axis: 'z', value: p.z });
+        }
+
+        candidateDefs.push({ axis: 'x', value: (bbox.minX + bbox.maxX) / 2 });
+        candidateDefs.push({ axis: 'y', value: (bbox.minY + bbox.maxY) / 2 });
+        candidateDefs.push({ axis: 'z', value: (bbox.minZ + bbox.maxZ) / 2 });
+
+        const filteredDefs = [];
+        for (const item of candidateDefs) {
+            const exists = filteredDefs.some(q =>
+                q.axis === item.axis && Math.abs(q.value - item.value) < 1e-4
+            );
+            if (!exists) filteredDefs.push(item);
+        }
+
+        const candidates = [];
+
+        for (const item of filteredDefs) {
+            let plane = null;
+            if (item.axis === 'x') plane = { n: new Point3D(1, 0, 0), d: -item.value };
+            if (item.axis === 'y') plane = { n: new Point3D(0, 1, 0), d: -item.value };
+            if (item.axis === 'z') plane = { n: new Point3D(0, 0, 1), d: -item.value };
+
+            const poly = buildSectionPolygon(this.shape, plane);
+            if (poly.length < 3) continue;
+
+            const line = lineFromTwoPlanes(section.plane, plane);
+            if (!line) continue;
+
+            const crossPoints = [];
+            for (const edge of this.shape.edges) {
+                const pts = intersectSegmentPlane(edge.v1, edge.v2, plane);
+                for (const p of pts) {
+                    if (Math.abs(signedDistanceToPlane(section.plane, p)) < 1e-4) {
+                        if (!crossPoints.some(q => samePoint(q, p, 1e-4))) {
+                            crossPoints.push(p);
+                        }
+                    }
+                }
+            }
+
+            if (crossPoints.length < 2) continue;
+
+            candidates.push({
+                axis: item.axis,
+                value: item.value,
+                plane,
+                polygon: poly,
+                line,
+                crossPoints
+            });
+        }
+
+        candidates.sort((a, b) => {
+            if (b.crossPoints.length !== a.crossPoints.length) {
+                return b.crossPoints.length - a.crossPoints.length;
+            }
+            return Math.abs(a.value) - Math.abs(b.value);
+        });
+
+        return candidates.slice(0, 3);
+    }
+
+    getAuxiliaryPlaneSteps(section) {
+        if (!section || !section.built || !section.plane) return [];
+        if (!this.isPolyhedronShape()) return [];
+        const auxPlanes = this.getAuxiliaryPlanes(section);
+        const steps = [];
+
+        auxPlanes.forEach((aux, idx) => {
+            steps.push({ type: 'auxPlane', auxIndex: idx, aux });
+            steps.push({ type: 'auxSection', auxIndex: idx, aux });
+            steps.push({ type: 'auxIntersectionLine', auxIndex: idx, aux });
+            steps.push({ type: 'auxPoints', auxIndex: idx, aux });
+        });
+
+        return steps;
+    }
+
+    advanceAuxiliaryPlaneMethod(dt) {
+        if (!this.showAuxiliaryPlaneMethod) return;
+        const steps = this.getAuxiliaryPlaneSteps(this.activeSection);
+        if (steps.length === 0) return;
+        if (this.auxStepIndex >= steps.length - 1) return;
+        this.auxStepElapsed += dt;
+        if (this.auxStepElapsed >= this.auxStepDuration) {
+            this.auxStepElapsed = 0;
+            this.auxStepIndex = Math.min(this.auxStepIndex + 1, steps.length - 1);
+        }
+    }
+
+    drawAuxiliaryPlanePatch(aux, fillColor = 'rgba(6,182,212,0.10)', strokeColor = '#06b6d4') {
+        const proj = aux.polygon.map(p => p.rotate(this.rotX, this.rotY).project(
+            this.canvas.width, this.canvas.height, this.cameraDistance, this.zoom
+        ));
+        if (proj.length < 3) return;
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(proj[0].x, proj[0].y);
+        for (let i = 1; i < proj.length; i++) this.ctx.lineTo(proj[i].x, proj[i].y);
+        this.ctx.closePath();
+        this.ctx.fillStyle = fillColor;
+        this.ctx.fill();
+        this.ctx.strokeStyle = strokeColor;
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([8, 5]);
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
+    }
+
+    drawInfiniteLineInScene(line, polygonRef, color = '#06b6d4') {
+        const center = polygonCenter(polygonRef);
+        let radius = 0;
+        for (const p of polygonRef) radius = Math.max(radius, p.distanceTo(center));
+        radius *= 2.2;
+
+        const a3 = line.point.add(line.dir.scale(-radius));
+        const b3 = line.point.add(line.dir.scale(radius));
+
+        const a2 = a3.rotate(this.rotX, this.rotY).project(this.canvas.width, this.canvas.height, this.cameraDistance, this.zoom);
+        const b2 = b3.rotate(this.rotX, this.rotY).project(this.canvas.width, this.canvas.height, this.cameraDistance, this.zoom);
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(a2.x, a2.y);
+        this.ctx.lineTo(b2.x, b2.y);
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = 2.5;
+        this.ctx.setLineDash([10, 7]);
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
+    }
+
+    drawAuxiliaryPlaneOverlay(section) {
+        if (!section || !section.built || !section.plane) return;
+        if (!this.isPolyhedronShape()) return;
+
+        const steps = this.getAuxiliaryPlaneSteps(section);
+        if (steps.length === 0) return;
+
+        const completed = Math.min(this.auxStepIndex, steps.length - 1);
+        const currentStep = steps[Math.min(this.auxStepIndex, steps.length - 1)];
+        const progress = Math.min(1, this.auxStepElapsed / this.auxStepDuration);
+
+        const drawStep = (step, animated = false) => {
+            const aux = step.aux;
+
+            if (step.type === 'auxPlane') {
+                this.drawAuxiliaryPlanePatch(
+                    aux,
+                    animated ? `rgba(6,182,212,${0.05 + 0.12 * progress})` : 'rgba(6,182,212,0.10)',
+                    '#06b6d4'
+                );
+            }
+
+            if (step.type === 'auxSection') {
+                this.drawAuxiliaryPlanePatch(aux, 'rgba(6,182,212,0.08)', '#06b6d4');
+                const proj = aux.polygon.map(p => p.rotate(this.rotX, this.rotY).project(
+                    this.canvas.width, this.canvas.height, this.cameraDistance, this.zoom
+                ));
+                this.ctx.beginPath();
+                this.ctx.moveTo(proj[0].x, proj[0].y);
+                for (let i = 1; i < proj.length; i++) this.ctx.lineTo(proj[i].x, proj[i].y);
+                this.ctx.closePath();
+                this.ctx.strokeStyle = '#06b6d4';
+                this.ctx.lineWidth = 2.5;
+                this.ctx.stroke();
+            }
+
+            if (step.type === 'auxIntersectionLine') {
+                this.drawAuxiliaryPlanePatch(aux, 'rgba(6,182,212,0.06)', '#06b6d4');
+                this.drawInfiniteLineInScene(aux.line, aux.polygon, '#f59e0b');
+            }
+
+            if (step.type === 'auxPoints') {
+                this.drawAuxiliaryPlanePatch(aux, 'rgba(6,182,212,0.06)', '#06b6d4');
+                this.drawInfiniteLineInScene(aux.line, aux.polygon, '#f59e0b');
+
+                for (const p3 of aux.crossPoints) {
+                    const p = p3.rotate(this.rotX, this.rotY).project(
+                        this.canvas.width,
+                        this.canvas.height,
+                        this.cameraDistance,
+                        this.zoom
+                    );
+
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, animated ? 6 + 2 * progress : 6, 0, Math.PI * 2);
+                    this.ctx.fillStyle = animated
+                        ? `rgba(245,158,11,${0.35 + 0.65 * progress})`
+                        : '#f59e0b';
+                    this.ctx.fill();
+
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, 4.5, 0, Math.PI * 2);
+                    this.ctx.fillStyle = '#ffffff';
+                    this.ctx.fill();
+                    this.ctx.strokeStyle = '#f59e0b';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+                }
+            }
+        };
+
+        for (let i = 0; i < completed; i++) drawStep(steps[i], false);
+        if (currentStep) drawStep(currentStep, true);
+
+        if (currentStep) {
+            const auxLabel = this.formatAuxiliaryPlane(currentStep.aux);
+
+            let title = 'Вспомогательная плоскость';
+            if (currentStep.type === 'auxSection') title = 'Сечение вспомогательной плоскостью';
+            if (currentStep.type === 'auxIntersectionLine') title = 'Пересечение двух плоскостей';
+            if (currentStep.type === 'auxPoints') title = 'Точки искомого сечения';
+
+            this.drawOverlayCaption(title, auxLabel);
+        }
+
+        if (this.auxStepIndex >= steps.length - 1) {
+            const color = section.color;
+            const r = parseInt(color.substr(1, 2), 16);
+            const g = parseInt(color.substr(3, 2), 16);
+            const b = parseInt(color.substr(5, 2), 16);
+
+            const projPoints = section.polygon.map(
+                p => p.rotate(this.rotX, this.rotY).project(
+                    this.canvas.width,
+                    this.canvas.height,
+                    this.cameraDistance,
+                    this.zoom
+                )
+            );
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(projPoints[0].x, projPoints[0].y);
+            for (let i = 1; i < projPoints.length; i++) this.ctx.lineTo(projPoints[i].x, projPoints[i].y);
+            this.ctx.closePath();
+            this.ctx.fillStyle = `rgba(${r},${g},${b},${section.opacity * 0.28})`;
+            this.ctx.fill();
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(projPoints[0].x, projPoints[0].y);
+            for (let i = 1; i < projPoints.length; i++) this.ctx.lineTo(projPoints[i].x, projPoints[i].y);
+            this.ctx.closePath();
+            this.ctx.strokeStyle = color;
+            this.ctx.lineWidth = 3;
+            this.ctx.stroke();
+        }
+    }
+
+    updateUI() {
+        const s = this.activeSection;
+
+        this.ui.sectionsCount.textContent = String(this.sections.length);
+        this.ui.activePointsCount.textContent = String(s.points.length);
+        this.ui.builtCount.textContent = String(this.sections.filter(section => section.built).length);
+
+        this.ui.sectionsList.innerHTML = this.sections.map((section, idx) => `
+<div class="section-item ${idx === this.activeSectionIndex ? 'active' : ''}" style="border-left-color:${section.color}">
+<div>
+<button class="section-tab-btn ${idx === this.activeSectionIndex ? 'active' : ''}" onclick="app.selectSection(${idx})">
+<span class="section-badge" style="background:${section.color}"></span>${section.name}
+</button>
+<div class="section-meta">
+Точек: ${section.points.length} · ${section.built ? `Площадь: ${section.area.toFixed(2)}` : 'не построено'}
+</div>
+</div>
+</div>
+`).join('');
+
+        if (s.points.length === 0) {
+            this.ui.pointsList.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:1rem">Нет точек</p>';
+        } else {
+            this.ui.pointsList.innerHTML = s.points.map((p, i) => `
+<div class="point-item">
+<span>
+Точка ${i + 1}<br>
+<small style="color: var(--text-secondary)">
+${p.hostType === 'edge'
+    ? `ребро ${p.edgeIdx + 1}, t=${p.param.toFixed(2)}`
+    : `грань ${p.faceIdx + 1}`
+}
+</small>
+</span>
+<button class="remove-btn" onclick="app.removePoint(${i})">✕</button>
+</div>
+`).join('');
+        }
+
+        if (s.built && s.planeCoeffs) {
+            const totalConstructionSteps = this.getConstructionSteps(s).length;
+            const currentConstructionStep = totalConstructionSteps > 0
+                ? Math.min(this.constructionStepIndex + 1, totalConstructionSteps)
+                : 0;
+
+            const totalTraceSteps = this.getTraceMethodSteps(s).length;
+            const currentTraceStep = totalTraceSteps > 0
+                ? Math.min(this.traceStepIndex + 1, totalTraceSteps)
+                : 0;
+
+            const totalAuxSteps = this.getAuxiliaryPlaneSteps(s).length;
+            const currentAuxStep = totalAuxSteps > 0
+                ? Math.min(this.auxStepIndex + 1, totalAuxSteps)
+                : 0;
+
+            let modeText = 'выключен';
+
+            if (this.showTraceMethod) {
+                modeText = this.isPolyhedronShape()
+                    ? `метод следов: шаг ${currentTraceStep} из ${totalTraceSteps}`
+                    : 'метод следов недоступен для тел вращения';
+            } else if (this.showConstructionSteps) {
+                modeText = `пошаговый показ: шаг ${currentConstructionStep} из ${totalConstructionSteps}`;
+            } else if (this.showAuxiliaryPlaneMethod) {
+                if (this.isPolyhedronShape()) {
+                    const auxSteps = this.getAuxiliaryPlaneSteps(s);
+                    const currentAux = auxSteps.length > 0
+                        ? auxSteps[Math.min(this.auxStepIndex, auxSteps.length - 1)].aux
+                        : null;
+
+                    const auxText = currentAux ? `, ${this.formatAuxiliaryPlane(currentAux)}` : '';
+                    modeText = `вспомогательная плоскость: шаг ${currentAuxStep} из ${totalAuxSteps}${auxText}`;
+                } else {
+                    modeText = 'вспомогательная плоскость недоступна для тел вращения';
+                }
+            }
+
+            this.ui.sectionInfo.style.display = 'block';
+            this.ui.sectionDetails.innerHTML =
+                `Вершин: ${s.polygon.length}<br>` +
+                `Площадь: ${s.area.toFixed(2)}<br>` +
+                `Уравнение: ${formatPlaneEquation(s.planeCoeffs)}<br>` +
+                `Источник: ${s.buildSource === 'equation' ? 'по уравнению' : 'по 3 точкам'}<br>` +
+                `Режим показа: ${modeText}`;
+        } else {
+            this.ui.sectionInfo.style.display = 'none';
+        }
+    }
+
+    selectSection(index) {
+        this.activeSectionIndex = index;
+        this.draggingPointIdx = -1;
+        this.hoveredPointIdx = -1;
+        this.syncSectionControls();
+        this.restartAllSpecialModes();
+        this.updateUI();
+    }
+
+    loop(now = performance.now()) {
+        const dt = now - this.lastFrameTime;
+        this.lastFrameTime = now;
+
+        this.advanceConstructionSteps(dt);
+        this.advanceTraceMethod(dt);
+        this.advanceAuxiliaryPlaneMethod(dt);
+        this.render();
+
+        requestAnimationFrame((ts) => this.loop(ts));
+    }
+
+    render() {
+        if (this.autoRotate && !this.mouseDown && this.draggingPointIdx === -1) {
+            this.rotY += this.autoRotateSpeed;
+            this.ui.rotY.value = this.rotY;
+            document.getElementById('rotYValue').textContent = Math.round(this.rotY);
+        }
+
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        this.ctx.clearRect(0, 0, w, h);
+
+        const rotated = this.getRotatedVertices();
+
+        let shapeCenter = new Point3D(0, 0, 0);
+        for (const v of rotated) shapeCenter = shapeCenter.add(v);
+        shapeCenter = shapeCenter.scale(1 / rotated.length);
+
+        const cameraPos = new Point3D(0, 0, -this.cameraDistance);
+
+        const faceVisible = this.shape.faces.map(face => {
+            const v0 = rotated[face[0]];
+            const v1 = rotated[face[1]];
+            const v2 = rotated[face[2]];
+            const a = v1.sub(v0);
+            const b = v2.sub(v0);
+            let n = a.cross(b);
+            let center = new Point3D(0, 0, 0);
+            for (const idx of face) center = center.add(rotated[idx]);
+            center = center.scale(1 / face.length);
+            const fromShapeCenter = center.sub(shapeCenter);
+            if (n.dot(fromShapeCenter) < 0) n = n.scale(-1);
+            const toCamera = cameraPos.sub(center);
+            return n.dot(toCamera) > 0;
+        });
+
+        if (this.warmLight) {
+            const centerProj = shapeCenter.project(w, h, this.cameraDistance, this.zoom);
+            let maxRadius = 80;
+            for (const v of rotated) {
+                const pv = v.project(w, h, this.cameraDistance, this.zoom);
+                const dx = pv.x - centerProj.x;
+                const dy = pv.y - centerProj.y;
+                maxRadius = Math.max(maxRadius, Math.sqrt(dx * dx + dy * dy));
+            }
+            const aura = this.ctx.createRadialGradient(
+                centerProj.x, centerProj.y, maxRadius * 0.15,
+                centerProj.x, centerProj.y, maxRadius * 1.9
+            );
+            aura.addColorStop(0.00, 'rgba(255, 210, 150, 0.20)');
+            aura.addColorStop(0.30, 'rgba(255, 180, 110, 0.14)');
+            aura.addColorStop(0.55, 'rgba(255, 145, 80, 0.08)');
+            aura.addColorStop(0.80, 'rgba(255, 120, 50, 0.035)');
+            aura.addColorStop(1.00, 'rgba(255, 120, 50, 0.00)');
+            this.ctx.save();
+            this.ctx.fillStyle = aura;
+            this.ctx.beginPath();
+            this.ctx.arc(centerProj.x, centerProj.y, maxRadius * 1.95, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.restore();
+        }
+
+        if (!this.wireframeOnly) {
+            this.shape.faces.forEach((face, idx) => {
+                if (!faceVisible[idx]) return;
+                const proj = face.map(i => rotated[i].project(w, h, this.cameraDistance, this.zoom));
+                this.ctx.beginPath();
+                this.ctx.moveTo(proj[0].x, proj[0].y);
+                for (let i = 1; i < proj.length; i++) this.ctx.lineTo(proj[i].x, proj[i].y);
+                this.ctx.closePath();
+                this.ctx.fillStyle = this.warmLight ? 'rgba(255, 235, 210, 0.05)' : 'rgba(59, 130, 246, 0.12)';
+                this.ctx.fill();
+            });
+        }
+
+        if (this.pointPlacementMode === 'face' && this.hoveredFaceIdx !== -1) {
+            const face = this.shape.faces[this.hoveredFaceIdx];
+            const proj = face.map(i => rotated[i].project(w, h, this.cameraDistance, this.zoom));
+            this.ctx.beginPath();
+            this.ctx.moveTo(proj[0].x, proj[0].y);
+            for (let i = 1; i < proj.length; i++) this.ctx.lineTo(proj[i].x, proj[i].y);
+            this.ctx.closePath();
+            this.ctx.fillStyle = 'rgba(34, 197, 94, 0.18)';
+            this.ctx.fill();
+            this.ctx.strokeStyle = 'rgba(34, 197, 94, 0.9)';
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+        }
+
+        const edgeRenderData = this.shape.edges.map(edge => {
+            const p1 = rotated[edge.v1Index].project(w, h, this.cameraDistance, this.zoom);
+            const p2 = rotated[edge.v2Index].project(w, h, this.cameraDistance, this.zoom);
+            let isVisible = false;
+            for (const fIdx of edge.faceIndices) {
+                if (faceVisible[fIdx]) { isVisible = true; break; }
+            }
+            return { edge, p1, p2, isVisible };
+        });
+
+        edgeRenderData.forEach(({ edge, p1, p2, isVisible }) => {
+            if (isVisible || edge.idx === this.hoveredEdgeIdx) return;
+            this.ctx.beginPath();
+            this.ctx.moveTo(p1.x, p1.y);
+            this.ctx.lineTo(p2.x, p2.y);
+            this.ctx.strokeStyle = this.warmLight ? 'rgba(160, 130, 95, 0.95)' : '#475569';
+            this.ctx.lineWidth = Math.max(0.8, this.edgeThickness * 0.6);
+            this.ctx.setLineDash([6, 6]);
+            this.ctx.stroke();
+            this.ctx.setLineDash([]);
+        });
+
+        edgeRenderData.forEach(({ edge, p1, p2, isVisible }) => {
+            if (!isVisible && edge.idx !== this.hoveredEdgeIdx) return;
+            this.ctx.beginPath();
+            this.ctx.moveTo(p1.x, p1.y);
+            this.ctx.lineTo(p2.x, p2.y);
+            if (edge.idx === this.hoveredEdgeIdx && this.pointPlacementMode === 'edge') {
+                this.ctx.strokeStyle = '#3b82f6';
+                this.ctx.lineWidth = Math.max(this.edgeThickness + 1, 3);
+                this.ctx.shadowColor = '#3b82f6';
+                this.ctx.shadowBlur = 10;
+            } else {
+                this.ctx.strokeStyle = this.warmLight ? '#d8c2a2' : '#94a3b8';
+                this.ctx.lineWidth = this.edgeThickness;
+                this.ctx.shadowBlur = this.warmLight ? 2 : 0;
+                this.ctx.shadowColor = this.warmLight ? 'rgba(255, 196, 120, 0.10)' : 'transparent';
+            }
+            this.ctx.setLineDash([]);
+            this.ctx.stroke();
+            this.ctx.shadowBlur = 0;
+        });
+
+        this.sections.forEach((section, sIdx) => {
+            if (!section.built || section.polygon.length < 3) return;
+
+            if ((this.showConstructionSteps || this.showTraceMethod || this.showAuxiliaryPlaneMethod) && sIdx === this.activeSectionIndex) return;
+
+            const color = section.color;
+            const opacity = section.opacity;
+            const r = parseInt(color.substr(1, 2), 16);
+            const g = parseInt(color.substr(3, 2), 16);
+            const b = parseInt(color.substr(5, 2), 16);
+
+            const projPoints = section.polygon.map(
+                p => p.rotate(this.rotX, this.rotY).project(w, h, this.cameraDistance, this.zoom)
+            );
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(projPoints[0].x, projPoints[0].y);
+            for (let i = 1; i < projPoints.length; i++) this.ctx.lineTo(projPoints[i].x, projPoints[i].y);
+            this.ctx.closePath();
+            this.ctx.fillStyle = `rgba(${r},${g},${b},${opacity})`;
+            this.ctx.fill();
+
+            for (let i = 0; i < section.polygon.length; i++) {
+                const a3 = section.polygon[i];
+                const b3 = section.polygon[(i + 1) % section.polygon.length];
+                const a2 = projPoints[i];
+                const b2 = projPoints[(i + 1) % section.polygon.length];
+                const mid3 = new Point3D((a3.x + b3.x) / 2, (a3.y + b3.y) / 2, (a3.z + b3.z) / 2);
+                const visible = this.isPointVisible(mid3, rotated, faceVisible);
+                this.ctx.beginPath();
+                this.ctx.moveTo(a2.x, a2.y);
+                this.ctx.lineTo(b2.x, b2.y);
+                this.ctx.strokeStyle = color;
+                this.ctx.lineWidth = sIdx === this.activeSectionIndex ? 2.8 : 2.0;
+                this.ctx.setLineDash(visible ? [] : [6, 6]);
+                this.ctx.stroke();
+                this.ctx.setLineDash([]);
+            }
+
+            projPoints.forEach((p, i) => {
+                const visible = this.isPointVisible(section.polygon[i], rotated, faceVisible);
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                this.ctx.fillStyle = visible ? '#fff' : 'rgba(255,255,255,0.65)';
+                this.ctx.fill();
+            });
+
+            if (this.showLabels && sIdx === this.activeSectionIndex) {
+                projPoints.forEach((p, i) => {
+                    const visible = this.isPointVisible(section.polygon[i], rotated, faceVisible);
+                    this.drawLabel(
+                        this.getSectionPointName(i),
+                        p.x + 8,
+                        p.y - 8,
+                        visible ? '#ffffff' : 'rgba(255,255,255,0.75)',
+                        visible ? 'rgba(37, 99, 235, 0.9)' : 'rgba(71, 85, 105, 0.85)'
+                    );
+                });
+            }
+        });
+
+        if (this.showConstructionSteps && this.activeSection?.built) {
+            this.drawConstructionSteps(this.activeSection);
+        }
+
+        if (this.showTraceMethod && this.activeSection?.built) {
+            this.drawTraceMethodOverlay(this.activeSection, rotated);
+        }
+
+        if (this.showAuxiliaryPlaneMethod && this.activeSection?.built) {
+            this.drawAuxiliaryPlaneOverlay(this.activeSection);
+        }
+
+        const activePoints = this.activeSection.points;
+        activePoints.forEach((pt, idx) => {
+            const proj = pt.rotate(this.rotX, this.rotY).project(w, h, this.cameraDistance, this.zoom);
+            this.ctx.beginPath();
+            this.ctx.arc(proj.x, proj.y, 5, 0, Math.PI * 2);
+            const isDragged = idx === this.draggingPointIdx;
+            const isHovered = idx === this.hoveredPointIdx;
+            if (pt.hostType === 'face') {
+                this.ctx.fillStyle = isDragged ? '#f59e0b' : (isHovered ? '#22c55e' : '#a855f7');
+            } else {
+                this.ctx.fillStyle = isDragged ? '#f59e0b' : (isHovered ? '#22c55e' : '#3b82f6');
+            }
+            this.ctx.fill();
+            this.ctx.strokeStyle = '#fff';
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+        });
+
+        rotated.forEach((v, i) => {
+            const p = v.project(w, h, this.cameraDistance, this.zoom);
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+            this.ctx.fillStyle = '#f1f5f9';
+            this.ctx.fill();
+            if (this.showLabels) {
+                this.drawLabel(this.getVertexName(i), p.x + 8, p.y - 8, '#f8fafc', 'rgba(15, 23, 42, 0.88)');
+            }
+        });
+    }
+}
+
+const app = new App();
+window.app = app;
+</script>
+</body>
+</html>
