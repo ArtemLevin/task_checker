@@ -424,6 +424,34 @@
                 <button class="tool-btn" id="toggleManualModeBtn">✏️ Ручной режим</button>
             </div>
 
+            <!-- Step-by-step control panel -->
+            <div id="stepControlPanel" style="background: var(--bg-card); padding: 1rem; border-radius: 12px; margin-top: 1rem; border: 1px solid var(--border); display: none;">
+                <h3 style="margin: 0 0 0.75rem 0; font-size: 0.95rem; color: var(--text-primary);">🎬 Управление пошаговым режимом</h3>
+                <div class="toolbar" style="margin-bottom: 0.75rem;">
+                    <button class="tool-btn" id="prevStepBtn">⏮️ Назад</button>
+                    <button class="tool-btn" id="nextStepBtn">⏭️ Далее</button>
+                    <button class="tool-btn" id="startAutoPlayBtn">▶️ Старт</button>
+                    <button class="tool-btn" id="pauseAutoPlayBtn">⏸️ Пауза</button>
+                    <button class="tool-btn" id="resetStepsBtn">🔄 Сброс</button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                    <label style="font-size: 0.85rem; color: var(--text-secondary);">Шаг:</label>
+                    <span id="currentStepDisplay" style="font-weight: bold; color: var(--accent);">0</span>
+                    <span style="color: var(--text-secondary);">/</span>
+                    <span id="totalStepsDisplay" style="color: var(--text-secondary);">0</span>
+                    <input type="range" id="stepSlider" min="0" max="0" value="0" style="flex-grow: 1;">
+                </div>
+                <div class="control-group" style="margin-bottom: 0;">
+                    <label style="font-size: 0.85rem; color: var(--text-secondary);">Скорость автовоспроизведения: <span id="autoPlaySpeedValue">1.0</span> сек/шаг</label>
+                    <input type="range" id="autoPlaySpeedSlider" min="0.5" max="3" step="0.1" value="1.0">
+                </div>
+            </div>
+
+            <!-- Explanation panel -->
+            <div id="explanationPanel" style="background: var(--bg-card); padding: 1rem; border-radius: 12px; margin-top: 1rem; border: 1px solid var(--border); min-height: 80px;">
+                <h3 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; color: var(--accent);">💡 Пояснение</h3>
+                <p id="explanationText" style="margin: 0; font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">Выберите метод построения или включите пошаговый режим для детального объяснения каждого шага.</p>
+            </div>
             <div style="background: var(--bg-card); padding: 1rem; border-radius: 12px; margin-top: 1rem; border: 1px solid var(--border);">
                 <div class="control-group" style="margin-bottom:0;">
                     <label>Скорость вращения: <span id="autoRotateSpeedValue">0.6</span></label>
@@ -1068,6 +1096,23 @@ class App {
 
         this.showTwoPointsDirectionMode = false;
         this.twoPointsDirectionData = { point1: null, point2: null, direction: null };
+        
+        // Step-by-step mode control
+        this.stepMode = false;
+        this.currentStep = 0;
+        this.totalSteps = 0;
+        this.steps = [];
+        this.isPaused = true;
+        this.autoPlay = false;
+        this.autoPlaySpeed = 1000; // ms per step
+        this.lastAutoPlayTime = 0;
+        
+        // Visualization helpers
+        this.helperLines = [];
+        this.projectionRays = [];
+        this.currentExplanation = "";
+        this.highlightedEdges = [];
+        this.highlightedFaces = [];
 
         this.showSelectedFacesMode = false;
         this.selectedFaceIndices = [];
@@ -1260,14 +1305,24 @@ class App {
         };
 
         document.getElementById('toggleConstructionStepsBtn').onclick = () => {
-            this.showConstructionSteps = !this.showConstructionSteps;
-            if (this.showConstructionSteps) {
+            this.stepMode = !this.stepMode;
+            this.showConstructionSteps = this.stepMode;
+            
+            const stepControlPanel = document.getElementById('stepControlPanel');
+            if (this.stepMode) {
                 this.showTraceMethod = false;
                 this.showAuxiliaryPlaneMethod = false;
                 document.getElementById('toggleTraceMethodBtn').classList.remove('active');
                 document.getElementById('toggleAuxiliaryPlaneBtn').classList.remove('active');
+                stepControlPanel.style.display = 'block';
+                this.generateSteps();
+                this.updateStepDisplay();
+            } else {
+                stepControlPanel.style.display = 'none';
+                this.isPaused = true;
+                this.autoPlay = false;
             }
-            document.getElementById('toggleConstructionStepsBtn').classList.toggle('active', this.showConstructionSteps);
+            document.getElementById('toggleConstructionStepsBtn').classList.toggle('active', this.stepMode);
             this.restartConstructionSteps();
         };
 
@@ -1386,6 +1441,62 @@ class App {
                 document.getElementById('toggleSelectedFacesBtn').classList.remove('active');
             }
             document.getElementById('toggleManualModeBtn').classList.toggle('active', this.showManualMode);
+        };
+
+        // Step control buttons
+        document.getElementById('prevStepBtn').onclick = () => {
+            if (this.currentStep > 0) {
+                this.currentStep--;
+                this.applyStep(this.currentStep);
+                this.updateStepDisplay();
+                this.isPaused = true;
+                this.autoPlay = false;
+            }
+        };
+
+        document.getElementById('nextStepBtn').onclick = () => {
+            if (this.currentStep < this.totalSteps - 1) {
+                this.currentStep++;
+                this.applyStep(this.currentStep);
+                this.updateStepDisplay();
+                this.isPaused = true;
+                this.autoPlay = false;
+            }
+        };
+
+        document.getElementById('startAutoPlayBtn').onclick = () => {
+            this.autoPlay = true;
+            this.isPaused = false;
+            this.lastAutoPlayTime = performance.now();
+        };
+
+        document.getElementById('pauseAutoPlayBtn').onclick = () => {
+            this.isPaused = true;
+            this.autoPlay = false;
+        };
+
+        document.getElementById('resetStepsBtn').onclick = () => {
+            this.currentStep = 0;
+            this.isPaused = true;
+            this.autoPlay = false;
+            this.applyStep(0);
+            this.updateStepDisplay();
+        };
+
+        document.getElementById('stepSlider').oninput = (e) => {
+            const step = parseInt(e.target.value);
+            if (step >= 0 && step < this.totalSteps) {
+                this.currentStep = step;
+                this.applyStep(step);
+                this.updateStepDisplay();
+                this.isPaused = true;
+                this.autoPlay = false;
+            }
+        };
+
+        document.getElementById('autoPlaySpeedSlider').oninput = (e) => {
+            this.autoPlaySpeed = parseFloat(e.target.value) * 1000;
+            document.getElementById('autoPlaySpeedValue').textContent = e.target.value;
         };
     }
 
@@ -1954,6 +2065,159 @@ class App {
     restartConstructionSteps() {
         this.constructionStepIndex = 0;
         this.constructionStepElapsed = 0;
+        if (this.stepMode) {
+            this.generateSteps();
+            this.currentStep = 0;
+            this.applyStep(0);
+            this.updateStepDisplay();
+        }
+    }
+
+    generateSteps() {
+        const section = this.activeSection;
+        if (!section || !section.built || !section.polygon || section.polygon.length < 3) {
+            this.steps = [];
+            this.totalSteps = 0;
+            return;
+        }
+        
+        this.steps = [];
+        const pts = section.polygon;
+        const edges = this.getActiveEdges();
+        
+        // Generate detailed steps with explanations
+        for (let i = 0; i < pts.length; i++) {
+            const pt = pts[i];
+            const edgeInfo = this.findEdgeForPoint(pt, edges);
+            
+            // Step 1: Draw helper line (trace or auxiliary line)
+            this.steps.push({
+                type: 'helper_line',
+                pointIndex: i,
+                edgeInfo: edgeInfo,
+                explanation: `Строим вспомогательную линию для нахождения точки пересечения с ребром ${edgeInfo ? edgeInfo.name : ''}`
+            });
+            
+            // Step 2: Show projection rays
+            this.steps.push({
+                type: 'projection_rays',
+                pointIndex: i,
+                edgeInfo: edgeInfo,
+                explanation: `Показываем проекции от следов плоскости до пересечения с ребром`
+            });
+            
+            // Step 3: Highlight the edge
+            this.steps.push({
+                type: 'highlight_edge',
+                pointIndex: i,
+                edgeInfo: edgeInfo,
+                explanation: `Выделяем ребро ${edgeInfo ? edgeInfo.name : ''}, в котором будет найдена точка`
+            });
+            
+            // Step 4: Show the point
+            this.steps.push({
+                type: 'point',
+                pointIndex: i,
+                edgeInfo: edgeInfo,
+                explanation: `Точка ${i + 1} — пересечение секущей плоскости с ребром ${edgeInfo ? edgeInfo.name : ''}`
+            });
+            
+            // Step 5: Draw segment (if not first point)
+            if (i > 0) {
+                this.steps.push({
+                    type: 'segment',
+                    fromIndex: i - 1,
+                    toIndex: i,
+                    explanation: `Соединяем точки ${i} и ${i + 1} отрезком секущей плоскости`
+                });
+            }
+        }
+        
+        // Close the polygon
+        if (pts.length > 2) {
+            this.steps.push({
+                type: 'segment',
+                fromIndex: pts.length - 1,
+                toIndex: 0,
+                explanation: `Замыкаем многоугольник сечения, соединяя последнюю точку с первой`
+            });
+        }
+        
+        this.totalSteps = this.steps.length;
+        this.currentStep = 0;
+    }
+
+    getActiveEdges() {
+        const shape = this.currentShape;
+        if (!shape) return [];
+        const edges = [];
+        if (shape.edges) {
+            for (let i = 0; i < shape.edges.length; i++) {
+                const edge = shape.edges[i];
+                const v1 = shape.vertices[edge[0]];
+                const v2 = shape.vertices[edge[1]];
+                edges.push({
+                    index: i,
+                    v1: v1,
+                    v2: v2,
+                    name: `P${edge[0]}-P${edge[1]}`
+                });
+            }
+        }
+        return edges;
+    }
+
+    findEdgeForPoint(point, edges) {
+        const threshold = 0.01;
+        for (const edge of edges) {
+            const dist1 = this.distance3D(point, edge.v1);
+            const dist2 = this.distance3D(point, edge.v2);
+            if (dist1 < threshold || dist2 < threshold) {
+                return edge;
+            }
+        }
+        return null;
+    }
+
+    distance3D(p1, p2) {
+        return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2 + (p1.z - p2.z) ** 2);
+    }
+
+    applyStep(stepIndex) {
+        if (stepIndex < 0 || stepIndex >= this.steps.length) return;
+        
+        // Reset visualization helpers
+        this.helperLines = [];
+        this.projectionRays = [];
+        this.highlightedEdges = [];
+        this.highlightedFaces = [];
+        
+        // Apply all steps up to and including current step
+        for (let i = 0; i <= stepIndex; i++) {
+            const step = this.steps[i];
+            if (!step) continue;
+            
+            if (step.type === 'helper_line') {
+                this.helperLines.push(step);
+            } else if (step.type === 'projection_rays') {
+                this.projectionRays.push(step);
+            } else if (step.type === 'highlight_edge' && step.edgeInfo) {
+                this.highlightedEdges.push(step.edgeInfo.index);
+            }
+            
+            this.currentExplanation = step.explanation || '';
+        }
+        
+        document.getElementById('explanationText').textContent = this.currentExplanation;
+    }
+
+    updateStepDisplay() {
+        document.getElementById('currentStepDisplay').textContent = String(this.currentStep + 1);
+        document.getElementById('totalStepsDisplay').textContent = String(this.totalSteps);
+        const slider = document.getElementById('stepSlider');
+        slider.min = '0';
+        slider.max = String(Math.max(0, this.totalSteps - 1));
+        slider.value = String(this.currentStep);
     }
 
     getConstructionSteps(section) {
@@ -1996,6 +2260,13 @@ class App {
 
     drawConstructionSteps(section) {
         if (!section || !section.built || section.polygon.length < 3) return;
+        
+        // If in step mode, use the new step visualization
+        if (this.stepMode) {
+            this.drawStepModeVisualization(section);
+            return;
+        }
+        
         const w = this.canvas.width;
         const h = this.canvas.height;
         const color = section.color;
@@ -2079,6 +2350,105 @@ class App {
             this.ctx.closePath();
             this.ctx.fillStyle = `rgba(${r},${g},${b},${section.opacity * 0.45})`;
             this.ctx.fill();
+        }
+    }
+
+    drawStepModeVisualization(section) {
+        if (!section || !section.built || section.polygon.length < 3) return;
+        
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const color = section.color;
+        const pts2d = section.polygon.map(
+            p => p.rotate(this.rotX, this.rotY).project(w, h, this.cameraDistance, this.zoom)
+        );
+        
+        // Draw helper lines (traces or auxiliary lines)
+        for (const step of this.helperLines) {
+            if (step.edgeInfo) {
+                const edgeStart = step.edgeInfo.v1.rotate(this.rotX, this.rotY).project(w, h, this.cameraDistance, this.zoom);
+                const edgeEnd = step.edgeInfo.v2.rotate(this.rotX, this.rotY).project(w, h, this.cameraDistance, this.zoom);
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(edgeStart.x, edgeStart.y);
+                this.ctx.lineTo(edgeEnd.x, edgeEnd.y);
+                this.ctx.strokeStyle = 'rgba(255, 255, 0, 0.6)';
+                this.ctx.lineWidth = 2;
+                this.ctx.setLineDash([5, 5]);
+                this.ctx.stroke();
+                this.ctx.setLineDash([]);
+            }
+        }
+        
+        // Draw projection rays
+        for (const step of this.projectionRays) {
+            if (step.pointIndex < pts2d.length && step.edgeInfo) {
+                const pt = pts2d[step.pointIndex];
+                const edgeMid = step.edgeInfo.v1.add(step.edgeInfo.v2).scale(0.5)
+                    .rotate(this.rotX, this.rotY).project(w, h, this.cameraDistance, this.zoom);
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(pt.x, pt.y);
+                this.ctx.lineTo(edgeMid.x, edgeMid.y);
+                this.ctx.strokeStyle = 'rgba(255, 100, 100, 0.4)';
+                this.ctx.lineWidth = 1;
+                this.ctx.setLineDash([3, 3]);
+                this.ctx.stroke();
+                this.ctx.setLineDash([]);
+            }
+        }
+        
+        // Draw highlighted edges
+        for (const edgeIdx of this.highlightedEdges) {
+            if (this.currentShape && this.currentShape.edges && this.currentShape.edges[edgeIdx]) {
+                const edge = this.currentShape.edges[edgeIdx];
+                const v1 = this.currentShape.vertices[edge[0]].rotate(this.rotX, this.rotY).project(w, h, this.cameraDistance, this.zoom);
+                const v2 = this.currentShape.vertices[edge[1]].rotate(this.rotX, this.rotY).project(w, h, this.cameraDistance, this.zoom);
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(v1.x, v1.y);
+                this.ctx.lineTo(v2.x, v2.y);
+                this.ctx.strokeStyle = 'rgba(255, 165, 0, 0.9)';
+                this.ctx.lineWidth = 4;
+                this.ctx.stroke();
+            }
+        }
+        
+        // Draw points up to current step
+        let lastPointIndex = -1;
+        for (let i = 0; i <= this.currentStep; i++) {
+            const step = this.steps[i];
+            if (!step) continue;
+            
+            if (step.type === 'point' && step.pointIndex < pts2d.length) {
+                const p = pts2d[step.pointIndex];
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.fill();
+                this.ctx.strokeStyle = color;
+                this.ctx.lineWidth = 3;
+                this.ctx.stroke();
+                this.drawLabel(String(step.pointIndex + 1), p.x + 10, p.y - 10, '#ffffff', 'rgba(37, 99, 235, 0.95)');
+                lastPointIndex = Math.max(lastPointIndex, step.pointIndex);
+            }
+        }
+        
+        // Draw segments between completed points
+        for (let i = 0; i <= this.currentStep; i++) {
+            const step = this.steps[i];
+            if (!step) continue;
+            
+            if (step.type === 'segment' && step.fromIndex < pts2d.length && step.toIndex < pts2d.length) {
+                const a = pts2d[step.fromIndex];
+                const b = pts2d[step.toIndex];
+                this.ctx.beginPath();
+                this.ctx.moveTo(a.x, a.y);
+                this.ctx.lineTo(b.x, b.y);
+                this.ctx.strokeStyle = color;
+                this.ctx.lineWidth = 4;
+                this.ctx.stroke();
+            }
         }
     }
 
@@ -2798,7 +3168,22 @@ ${p.hostType === 'edge'
         const dt = now - this.lastFrameTime;
         this.lastFrameTime = now;
 
-        if (this.showConstructionSteps) {
+        // Handle autoPlay for step mode
+        if (this.stepMode && this.autoPlay && !this.isPaused) {
+            if (now - this.lastAutoPlayTime >= this.autoPlaySpeed) {
+                if (this.currentStep < this.totalSteps - 1) {
+                    this.currentStep++;
+                    this.applyStep(this.currentStep);
+                    this.updateStepDisplay();
+                } else {
+                    this.autoPlay = false;
+                    this.isPaused = true;
+                }
+                this.lastAutoPlayTime = now;
+            }
+        }
+
+        if (this.showConstructionSteps && !this.stepMode) {
             this.advanceConstructionSteps(dt);
         }
         if (this.showTraceMethod) {
