@@ -422,6 +422,7 @@
                 <button class="tool-btn" id="toggleConstructionStepsBtn">👣 Пошаговое построение</button>
                 <button class="tool-btn" id="toggleTraceMethodBtn">🧭 Метод следов</button>
                 <button class="tool-btn" id="toggleAuxiliaryPlaneBtn">🪟 Вспомогательная плоскость</button>
+                <button class="tool-btn" id="toggleCombinedMethodBtn">🔀 Комбинированный метод</button>
                 <button class="tool-btn" id="toggleParallelSectionsBtn">📐 Метод параллельных сечений</button>
                 <button class="tool-btn" id="toggleTwoPointsDirectionBtn">🎯 2 точки + направление</button>
                 <button class="tool-btn" id="toggleSelectedFacesBtn">🔲 Выбор граней</button>
@@ -1226,6 +1227,12 @@ class App {
         this.auxStepElapsed = 0;
         this.auxStepDuration = 1200;
 
+        // Комбинированный метод
+        this.showCombinedMethod = false;
+        this.combinedStepIndex = 0;
+        this.combinedStepElapsed = 0;
+        this.combinedStepDuration = 1300;
+
         // Новые режимы построения
         this.showParallelSectionsMethod = false;
         this.parallelStepIndex = 0;
@@ -1481,12 +1488,14 @@ class App {
             if (this.showAuxiliaryPlaneMethod) {
                 this.showConstructionSteps = false;
                 this.showTraceMethod = false;
+                this.showCombinedMethod = false;
                 this.showParallelSectionsMethod = false;
                 this.showTwoPointsDirectionMode = false;
                 this.showSelectedFacesMode = false;
                 this.showManualMode = false;
                 document.getElementById('toggleConstructionStepsBtn').classList.remove('active');
                 document.getElementById('toggleTraceMethodBtn').classList.remove('active');
+                document.getElementById('toggleCombinedMethodBtn').classList.remove('active');
                 document.getElementById('toggleParallelSectionsBtn').classList.remove('active');
                 document.getElementById('toggleTwoPointsDirectionBtn').classList.remove('active');
                 document.getElementById('toggleSelectedFacesBtn').classList.remove('active');
@@ -1494,6 +1503,29 @@ class App {
             }
             document.getElementById('toggleAuxiliaryPlaneBtn').classList.toggle('active', this.showAuxiliaryPlaneMethod);
             this.restartAuxiliaryPlaneMethod();
+        };
+
+        // Комбинированный метод
+        document.getElementById('toggleCombinedMethodBtn').onclick = () => {
+            this.showCombinedMethod = !this.showCombinedMethod;
+            if (this.showCombinedMethod) {
+                this.showConstructionSteps = false;
+                this.showTraceMethod = false;
+                this.showAuxiliaryPlaneMethod = false;
+                this.showParallelSectionsMethod = false;
+                this.showTwoPointsDirectionMode = false;
+                this.showSelectedFacesMode = false;
+                this.showManualMode = false;
+                document.getElementById('toggleConstructionStepsBtn').classList.remove('active');
+                document.getElementById('toggleTraceMethodBtn').classList.remove('active');
+                document.getElementById('toggleAuxiliaryPlaneBtn').classList.remove('active');
+                document.getElementById('toggleParallelSectionsBtn').classList.remove('active');
+                document.getElementById('toggleTwoPointsDirectionBtn').classList.remove('active');
+                document.getElementById('toggleSelectedFacesBtn').classList.remove('active');
+                document.getElementById('toggleManualModeBtn').classList.remove('active');
+            }
+            document.getElementById('toggleCombinedMethodBtn').classList.toggle('active', this.showCombinedMethod);
+            this.restartCombinedMethod();
         };
 
         // Метод параллельных сечений
@@ -1642,7 +1674,13 @@ class App {
         this.restartConstructionSteps();
         this.restartTraceMethod();
         this.restartAuxiliaryPlaneMethod();
+        this.restartCombinedMethod();
         this.restartParallelSectionsMethod();
+    }
+
+    restartCombinedMethod() {
+        this.combinedStepIndex = 0;
+        this.combinedStepElapsed = 0;
     }
 
     restartParallelSectionsMethod() {
@@ -2886,6 +2924,11 @@ class App {
         this.auxStepElapsed = 0;
     }
 
+    restartCombinedMethod() {
+        this.combinedStepIndex = 0;
+        this.combinedStepElapsed = 0;
+    }
+
     formatAuxiliaryPlane(aux) {
         const value = Math.abs(aux.value) < 1e-6 ? 0 : aux.value;
         const rounded = Math.round(value * 100) / 100;
@@ -3016,6 +3059,40 @@ class App {
         return candidates.slice(0, 3);
     }
 
+    getCombinedMethodSteps(section) {
+        if (!section || !section.built || !section.plane) return [];
+        if (!this.isPolyhedronShape()) return [];
+        
+        // Определяем, какой метод использовать на основе расположения точек сечения
+        const bbox = {
+            minX: Infinity, maxX: -Infinity,
+            minY: Infinity, maxY: -Infinity,
+            minZ: Infinity, maxZ: -Infinity
+        };
+        
+        for (const v of this.shape.vertices) {
+            bbox.minX = Math.min(bbox.minX, v.x);
+            bbox.maxX = Math.max(bbox.maxX, v.x);
+            bbox.minY = Math.min(bbox.minY, v.y);
+            bbox.maxY = Math.max(bbox.maxY, v.y);
+            bbox.minZ = Math.min(bbox.minZ, v.z);
+            bbox.maxZ = Math.max(bbox.maxZ, v.z);
+        }
+        
+        // Проверяем, сколько точек сечения находятся близко к основанию (minZ)
+        const baseThreshold = bbox.minZ + (bbox.maxZ - bbox.minZ) * 0.15;
+        const pointsOnBase = section.polygon.filter(p => p.z <= baseThreshold).length;
+        
+        // Если много точек у основания -> используем метод следов, иначе -> вспомогательных плоскостей
+        if (pointsOnBase >= 2) {
+            // Возвращаем шаги метода следов
+            return this.getTraceMethodSteps(section);
+        } else {
+            // Возвращаем шаги метода вспомогательных плоскостей
+            return this.getAuxiliaryPlaneSteps(section);
+        }
+    }
+
     getAuxiliaryPlaneSteps(section) {
         if (!section || !section.built || !section.plane) return [];
         if (!this.isPolyhedronShape()) return [];
@@ -3041,6 +3118,24 @@ class App {
         if (this.auxStepElapsed >= this.auxStepDuration) {
             this.auxStepElapsed = 0;
             this.auxStepIndex = Math.min(this.auxStepIndex + 1, steps.length - 1);
+        }
+    }
+
+    advanceCombinedMethod(dt) {
+        if (!this.showCombinedMethod) return;
+        // Комбинированный метод использует логику следов или вспомогательных плоскостей
+        // в зависимости от расположения точек
+        const section = this.activeSection;
+        if (!section || !section.built) return;
+        
+        const steps = this.getCombinedMethodSteps(section);
+        if (steps.length === 0) return;
+        if (this.combinedStepIndex >= steps.length - 1) return;
+        
+        this.combinedStepElapsed += dt;
+        if (this.combinedStepElapsed >= this.combinedStepDuration) {
+            this.combinedStepElapsed = 0;
+            this.combinedStepIndex = Math.min(this.combinedStepIndex + 1, steps.length - 1);
         }
     }
 
@@ -3334,6 +3429,9 @@ ${p.hostType === 'edge'
         if (this.showAuxiliaryPlaneMethod) {
             this.advanceAuxiliaryPlaneMethod(dt);
         }
+        if (this.showCombinedMethod) {
+            this.advanceCombinedMethod(dt);
+        }
         if (this.showParallelSectionsMethod) {
             this.advanceParallelSectionsMethod(dt);
         }
@@ -3545,6 +3643,37 @@ ${p.hostType === 'edge'
 
         if (this.showAuxiliaryPlaneMethod && this.activeSection?.built) {
             this.drawAuxiliaryPlaneOverlay(this.activeSection);
+        }
+
+        if (this.showCombinedMethod && this.activeSection?.built) {
+            // Комбинированный метод отображает шаги в зависимости от выбранной стратегии
+            const section = this.activeSection;
+            const bbox = {
+                minX: Infinity, maxX: -Infinity,
+                minY: Infinity, maxY: -Infinity,
+                minZ: Infinity, maxZ: -Infinity
+            };
+            for (const v of this.shape.vertices) {
+                bbox.minX = Math.min(bbox.minX, v.x);
+                bbox.maxX = Math.max(bbox.maxX, v.x);
+                bbox.minY = Math.min(bbox.minY, v.y);
+                bbox.maxY = Math.max(bbox.maxY, v.y);
+                bbox.minZ = Math.min(bbox.minZ, v.z);
+                bbox.maxZ = Math.max(bbox.maxZ, v.z);
+            }
+            const baseThreshold = bbox.minZ + (bbox.maxZ - bbox.minZ) * 0.15;
+            const pointsOnBase = section.polygon.filter(p => p.z <= baseThreshold).length;
+            
+            if (pointsOnBase >= 2) {
+                // Метод следов
+                this.drawTraceMethodOverlay(section, rotated);
+                this.drawTraceMethodComplete(section);
+                this.drawOverlayCaption('🔀 Комбинированный метод', 'Используется: Метод следов');
+            } else {
+                // Метод вспомогательных плоскостей
+                this.drawAuxiliaryPlaneOverlay(section);
+                this.drawOverlayCaption('🔀 Комбинированный метод', 'Используется: Метод вспомогательных плоскостей');
+            }
         }
 
         const activePoints = this.activeSection.points;
