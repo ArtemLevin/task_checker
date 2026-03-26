@@ -2732,14 +2732,28 @@ ${p.hostType === 'edge'
         this.updateUI();
     }
 
+    advanceParallelSectionsMethod(dt) {
+        if (!this.showParallelSectionsMethod) return;
+        // Заглушка для метода параллельных сечений
+        // Реализация будет добавлена отдельно
+    }
+
     loop(now = performance.now()) {
         const dt = now - this.lastFrameTime;
         this.lastFrameTime = now;
 
-        this.advanceConstructionSteps(dt);
-        this.advanceTraceMethod(dt);
-        this.advanceAuxiliaryPlaneMethod(dt);
-        this.advanceParallelSectionsMethod(dt);
+        if (this.showConstructionSteps) {
+            this.advanceConstructionSteps(dt);
+        }
+        if (this.showTraceMethod) {
+            this.advanceTraceMethod(dt);
+        }
+        if (this.showAuxiliaryPlaneMethod) {
+            this.advanceAuxiliaryPlaneMethod(dt);
+        }
+        if (this.showParallelSectionsMethod) {
+            this.advanceParallelSectionsMethod(dt);
+        }
         this.render();
 
         requestAnimationFrame((ts) => this.loop(ts));
