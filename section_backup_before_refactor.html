@@ -335,13 +335,9 @@
             <div class="shape-selector">
                 <button class="shape-btn active" data-shape="cube">Куб</button>
                 <button class="shape-btn" data-shape="pyramid">Пирамида</button>
-                <button class="shape-btn" data-shape="squarePyramid">4-уг. пирамида</button>
-                <button class="shape-btn" data-shape="pentagonalPyramid">5-уг. пирамида</button>
                 <button class="shape-btn" data-shape="hexagonalPyramid">6-уг. пирамида</button>
                 <button class="shape-btn" data-shape="prism">Призма</button>
-                <button class="shape-btn" data-shape="triangularPrism">3-уг. призма</button>
                 <button class="shape-btn" data-shape="tetrahedron">Тетраэдр</button>
-                <button class="shape-btn" data-shape="octahedron">Октаэдр</button>
                 <button class="shape-btn" data-shape="cylinder">Цилиндр</button>
                 <button class="shape-btn" data-shape="cone">Конус</button>
                 <button class="shape-btn" data-shape="sphere">Шар</button>
@@ -837,140 +833,6 @@ class Sphere extends Shape {
                 const next = (i + 1) % lonSegments;
                 this.faces.push([lastRing[i], lastRing[next], bottomIndex]);
             }
-        }
-        this.buildConnectivity();
-    }
-}
-
-// === Triangular Prism (Треугольная призма) ===
-class TriangularPrism extends Shape {
-    constructor(size = 200) {
-        super('triangularPrism');
-        const h = size;
-        const r = size * 0.6;
-        // Bottom triangle
-        for (let i = 0; i < 3; i++) {
-            const angle = (2 * Math.PI * i) / 3 - Math.PI / 2;
-            this.vertices.push(new Point3D(r * Math.cos(angle), -h / 2, r * Math.sin(angle)));
-        }
-        // Top triangle
-        for (let i = 0; i < 3; i++) {
-            const angle = (2 * Math.PI * i) / 3 - Math.PI / 2;
-            this.vertices.push(new Point3D(r * Math.cos(angle), h / 2, r * Math.sin(angle)));
-        }
-        // Bottom edges
-        for (let i = 0; i < 3; i++) {
-            this.edges.push(new Edge(this.vertices[i], this.vertices[(i + 1) % 3], this.edges.length, i, (i + 1) % 3));
-        }
-        // Top edges
-        for (let i = 0; i < 3; i++) {
-            this.edges.push(new Edge(this.vertices[i + 3], this.vertices[((i + 1) % 3) + 3], this.edges.length, i + 3, ((i + 1) % 3) + 3));
-        }
-        // Vertical edges
-        for (let i = 0; i < 3; i++) {
-            this.edges.push(new Edge(this.vertices[i], this.vertices[i + 3], this.edges.length, i, i + 3));
-        }
-        // Faces
-        this.faces.push([0, 1, 2]); // bottom
-        this.faces.push([3, 5, 4]); // top
-        for (let i = 0; i < 3; i++) {
-            this.faces.push([i, (i + 1) % 3, ((i + 1) % 3) + 3, i + 3]); // side faces
-        }
-        this.buildConnectivity();
-    }
-}
-
-// === Square Pyramid (Четырёхугольная пирамида) ===
-class SquarePyramid extends Shape {
-    constructor(size = 200) {
-        super('squarePyramid');
-        const baseSize = size * 0.7;
-        const height = size * 0.9;
-        // Base square
-        this.vertices.push(new Point3D(-baseSize / 2, -height / 2, -baseSize / 2));
-        this.vertices.push(new Point3D(baseSize / 2, -height / 2, -baseSize / 2));
-        this.vertices.push(new Point3D(baseSize / 2, -height / 2, baseSize / 2));
-        this.vertices.push(new Point3D(-baseSize / 2, -height / 2, baseSize / 2));
-        // Apex
-        this.vertices.push(new Point3D(0, height / 2, 0));
-        // Base edges
-        for (let i = 0; i < 4; i++) {
-            this.edges.push(new Edge(this.vertices[i], this.vertices[(i + 1) % 4], this.edges.length, i, (i + 1) % 4));
-        }
-        // Side edges
-        for (let i = 0; i < 4; i++) {
-            this.edges.push(new Edge(this.vertices[i], this.vertices[4], this.edges.length, i, 4));
-        }
-        // Faces
-        this.faces.push([0, 1, 2, 3]); // base
-        for (let i = 0; i < 4; i++) {
-            this.faces.push([i, (i + 1) % 4, 4]); // side faces
-        }
-        this.buildConnectivity();
-    }
-}
-
-// === Pentagonal Pyramid (Пятиугольная пирамида) ===
-class PentagonalPyramid extends Shape {
-    constructor(size = 200) {
-        super('pentagonalPyramid');
-        const r = size * 0.6;
-        const height = size * 0.85;
-        // Base pentagon
-        for (let i = 0; i < 5; i++) {
-            const angle = (2 * Math.PI * i) / 5 - Math.PI / 2;
-            this.vertices.push(new Point3D(r * Math.cos(angle), -height / 2, r * Math.sin(angle)));
-        }
-        // Apex
-        this.vertices.push(new Point3D(0, height / 2, 0));
-        // Base edges
-        for (let i = 0; i < 5; i++) {
-            this.edges.push(new Edge(this.vertices[i], this.vertices[(i + 1) % 5], this.edges.length, i, (i + 1) % 5));
-        }
-        // Side edges
-        for (let i = 0; i < 5; i++) {
-            this.edges.push(new Edge(this.vertices[i], this.vertices[5], this.edges.length, i, 5));
-        }
-        // Faces
-        const baseFace = [];
-        for (let i = 0; i < 5; i++) baseFace.push(i);
-        this.faces.push(baseFace);
-        for (let i = 0; i < 5; i++) {
-            this.faces.push([i, (i + 1) % 5, 5]);
-        }
-        this.buildConnectivity();
-    }
-}
-
-// === Octahedron (Октаэдр) ===
-class Octahedron extends Shape {
-    constructor(size = 200) {
-        super('octahedron');
-        const r = size * 0.7;
-        // Vertices: top, bottom, and 4 around equator
-        this.vertices.push(new Point3D(0, r, 0)); // top
-        this.vertices.push(new Point3D(0, -r, 0)); // bottom
-        this.vertices.push(new Point3D(r, 0, 0)); // front-right
-        this.vertices.push(new Point3D(0, 0, r)); // front-left
-        this.vertices.push(new Point3D(-r, 0, 0)); // back-left
-        this.vertices.push(new Point3D(0, 0, -r)); // back-right
-        // Edges from top to equator
-        for (let i = 2; i < 6; i++) {
-            this.edges.push(new Edge(this.vertices[0], this.vertices[i], this.edges.length, 0, i));
-        }
-        // Edges from bottom to equator
-        for (let i = 2; i < 6; i++) {
-            this.edges.push(new Edge(this.vertices[1], this.vertices[i], this.edges.length, 1, i));
-        }
-        // Equator edges
-        for (let i = 2; i < 6; i++) {
-            this.edges.push(new Edge(this.vertices[i], this.vertices[(i - 2 + 1) % 4 + 2], this.edges.length, i, (i - 2 + 1) % 4 + 2));
-        }
-        // Faces (8 triangles)
-        for (let i = 2; i < 6; i++) {
-            const next = (i - 2 + 1) % 4 + 2;
-            this.faces.push([0, i, next]); // top faces
-            this.faces.push([1, next, i]); // bottom faces
         }
         this.buildConnectivity();
     }
@@ -1667,13 +1529,9 @@ class App {
         switch(type) {
             case 'cube': this.shape = new Cube(this.size); break;
             case 'pyramid': this.shape = new Pyramid(this.size); break;
-            case 'squarePyramid': this.shape = new SquarePyramid(this.size); break;
-            case 'pentagonalPyramid': this.shape = new PentagonalPyramid(this.size); break;
             case 'hexagonalPyramid': this.shape = new HexagonalPyramid(this.size); break;
             case 'prism': this.shape = new Prism(this.size); break;
-            case 'triangularPrism': this.shape = new TriangularPrism(this.size); break;
             case 'tetrahedron': this.shape = new Tetrahedron(this.size); break;
-            case 'octahedron': this.shape = new Octahedron(this.size); break;
             case 'cylinder': this.shape = new Cylinder(this.size, 28); break;
             case 'cone': this.shape = new Cone(this.size, 28); break;
             case 'sphere': this.shape = new Sphere(this.size, 12, 20); break;
